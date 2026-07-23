@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: paper1-remote-speech-qc
-Version: 0.3.0
+Version: 0.4.0
 Summary: Auditable quality-control measurement pipeline for remote ALS speech recordings
 Requires-Python: <3.13,>=3.11
 Description-Content-Type: text/markdown
@@ -39,28 +39,32 @@ The principal design decisions are:
 - never average heterogeneous metrics into an overall Q score without separate construct-validation evidence;
 - retain one logical recording when WAV/WEBM rows describe the same recording;
 - cluster inference by participant and prevent repeated recordings from becoming pseudoreplicates;
-- quantify four-RA human inter-rater agreement before forming consensus;
+- estimate main perceptual alignment within RA and quantify four-RA agreement only in
+  the crossed reliability subset before forming consensus;
 - use no SMOTE, synthetic minority examples, or record-level train/test splitting.
 
 ## What is currently verifiable
 
 The uploaded metadata workbooks were audited and the results are summarized in `reports/reference_audit/REFERENCE_METADATA_AUDIT.md`. The repository also passes the included synthetic checks for segmentation guards, sentinel handling, additive-noise behavior, hard clipping, dropouts, reverberation tails, and rater consensus.
 
-The full empirical run remains intentionally blocked in this environment because the actual audio directories and complete independent four-RA detailed QC set are local to the study computer. The code is configured for the stated Windows root and can be run locally now. The four uploaded CSV examples were validated as interval-annotation exports, but they contain no rater identifier and cover four different recordings; they cannot by themselves estimate four-RA agreement.
+The full empirical run remains intentionally unavailable in this environment because the
+audio directories and complete annotations are local to the study computer. The code is
+configured for the stated Windows root and can be run locally now. It recognizes rater
+identity from the four declared RA folders, excludes `Reliability` from the distributed
+main import, and separately validates the crossed 70-file reliability set.
 
 ## Windows setup
 
 Use Python 3.11 and install FFmpeg/FFprobe on `PATH`.
 
 ```powershell
-cd path\to\paper1_pipeline_rebuilt
+cd "C:\Users\musikicn\Desktop\Nevena_project\paper_1"
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install -e ".[dev,reverb]"
 Copy-Item config\project.example.yaml config\project.yaml
 Copy-Item config\human_qc_schema.example.yaml config\human_qc_schema.yaml
-Copy-Item config\human_qc_manifest.example.csv config\human_qc_manifest.csv
 ffmpeg -version
 ffprobe -version
 ```
@@ -84,7 +88,8 @@ paper1-qc --config config/project.yaml assemble
 paper1-qc --config config/project.yaml describe
 ```
 
-After completing the four-RA manifest and confirming broad-label direction:
+After checking the four RA folder names, the nested `Reliability` layout, and the broad
+label direction:
 
 ```powershell
 paper1-qc --config config/project.yaml human-qc --schema config/human_qc_schema.yaml
@@ -99,6 +104,12 @@ paper1-qc --config config/project.yaml sensitivity
 paper1-qc --config config/project.yaml rest-reference
 paper1-qc --config config/project.yaml encoding-sensitivity
 ```
+
+`Rest` is not pooled into the primary Bamboo cohort. The pipeline audits `Rest.xlsx` and
+the Rest media inventory, then uses only exact participant/date/protocol/iteration
+Bamboo–Rest pairs as a contextual acquisition sensitivity. Rest is summarized as a
+whole-recording reference without speech VAD; unmatched or nearest-date Rest recordings
+are excluded from this comparison.
 
 The notebooks under `notebooks/` mirror the computational order and remain thin
 orchestration layers. The separate `visualization/` folder contains long-form audit code,
@@ -116,7 +127,7 @@ See `docs/GIT_AND_WINDOWS_RUN_GUIDE.md` for exact PowerShell, Git, and notebook 
 | `01_segmentation` | interval table with raw/primary/strict views and profiles; error ledger | inspect support distributions and a stratified visual sample |
 | `02_features` | one metric row per logical Bamboo recording; family statuses; metric registry | zero silent failures; investigate impossible ranges and support failures |
 | `03_dataset_assembly` | validated one-to-one merge; explicit eligibility columns | reproduce the participant/recording flow diagram from saved counts |
-| `04_analysis` | clustered descriptive estimates, structure, persistence, four-RA agreement, family alignment, paired 4RA/2RA comparison, sensitivity | verify denominators, confidence intervals, class support, direction/scale mapping, and blocked analyses |
+| `04_analysis` | clustered descriptive estimates, structure, persistence, rater-stratified main alignment, crossed-set four-RA agreement/consensus, paired detailed/2RA comparisons, sensitivity | verify denominators, confidence intervals, class support, direction/scale mapping, and blocked analyses |
 
 Every command saves CSV (and Parquet when available), an error ledger where relevant, and a run manifest containing configuration/input hashes and package versions.
 
@@ -128,7 +139,8 @@ Stop rather than improvise if any of the following occurs:
 - filename subject/date/task disagrees with metadata;
 - diagnosis is inferred from an ID but has not been reviewed;
 - a clinical sentinel or impossible score/date remains in an analysis field;
-- independent rater identity is absent, the expected four-RA crossed subset is absent, or exports appear adjudicated rather than independent;
+- independent rater identity is absent, the folder design is inconsistent, or crossed
+  reliability exports appear adjudicated rather than independent;
 - the class/category count is too small for the pre-specified estimand;
 - VAD or feature extraction fails without a saved error row;
 - a result requires treating WAV and WEBM copies or repeated visits as independent observations.
