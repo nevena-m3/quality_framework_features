@@ -1,7 +1,7 @@
 # Scientific measurement protocol
 
-Version: 0.3.0  
-Status: implementation-complete; empirical execution pending audio and complete detailed four-rater QC access
+Version: 0.4.0  
+Status: implementation-complete; empirical execution pending local audio and annotations
 
 ## 1. Scope and claims
 
@@ -24,7 +24,11 @@ Several speech-region measures can contain both acquisition and physiology. This
 - **Dependence unit:** participant. All interval estimates retain participant clustering.
 - **Rest data:** inventory and exact participant/date/protocol/iteration pairing only. Rest is a session-reference/sensitivity source; it is not passed through speech VAD as if it were a speech task.
 - **Combined Rest_Bamboo workbook:** reconciliation check only. It is not appended to standalone workbooks.
-- **Detailed human QC:** four independent RA interval-annotation layers, preserved in item–rater–family long format with event-level intervals. Rater identity comes from an explicit manifest or validated RA subfolder, never the recording filename.
+- **Detailed human QC:** a distributed main set with one independent RA per recording,
+  plus a crossed Reliability subset containing the same approximately 70 recordings for
+  all four RAs. Both are preserved in item–rater–family long format with event-level
+  intervals and are never pooled as a single crossed design. Rater identity comes from
+  the four predeclared RA subfolder names, never the recording filename.
 - **Broad metadata QC:** treated as a separate external label system. If individual ratings from its two RAs are unavailable, its inter-rater reliability is not estimable.
 
 ## 3. Immutable ingestion and provenance

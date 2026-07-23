@@ -621,6 +621,140 @@ def family_alignment_matrix(
     return pd.DataFrame(rows)
 
 
+def rater_stratified_family_alignment(
+    family_indices: pd.DataFrame,
+    labels: pd.DataFrame,
+    *,
+    label_system: str,
+    rater_col: str = "rater_id",
+    subject_col: str = "SubjectID",
+    file_col: str = "file_name",
+    minimum_class_recordings_per_rater: int = 3,
+    minimum_participants: int = 5,
+    bootstrap_replicates: int = 2000,
+    seed: int = 20260713,
+) -> pd.DataFrame:
+    """Family alignment for a distributed design with one RA per recording.
+
+    The primary effect is a positive-negative-pair-weighted mean of within-rater
+    rank-biserial effects. It prevents between-rater threshold differences from being
+    interpreted as objective-family alignment. It cannot identify rater bias separately
+    from item allocation because the raters have no shared recordings.
+    """
+    family_column = "category" if "category" in labels.columns else "family"
+    rating_column = "consensus_rating" if "consensus_rating" in labels.columns else "rating"
+    required = {file_col, family_column, rating_column, rater_col}
+    missing = required - set(labels.columns)
+    if missing:
+        raise ValueError(f"Distributed labels are missing columns: {sorted(missing)}")
+    merged = family_indices.merge(
+        labels[[file_col, family_column, rating_column, rater_col]],
+        on=file_col,
+        how="inner",
+        validate="one_to_many",
+    )
+    objective_columns = {
+        column.removeprefix("qfamily__"): column
+        for column in family_indices.columns
+        if column.startswith("qfamily__")
+    }
+
+    def stratified_effect(sample: pd.DataFrame, score_column: str) -> tuple[float, int, int]:
+        effects = []
+        weights = []
+        for _, rater_frame in sample.groupby(rater_col):
+            work = pd.DataFrame(
+                {
+                    "y": pd.to_numeric(rater_frame[rating_column], errors="coerce"),
+                    "score": pd.to_numeric(rater_frame[score_column], errors="coerce"),
+                }
+            ).dropna()
+            counts = work["y"].value_counts()
+            if len(counts) != 2 or counts.min() < minimum_class_recordings_per_rater:
+                continue
+            auc = _roc_auc(work["y"], work["score"])
+            if not np.isfinite(auc):
+                continue
+            effects.append(float(2 * auc - 1))
+            weights.append(float(counts.iloc[0] * counts.iloc[1]))
+        if not effects or not np.sum(weights):
+            return np.nan, 0, 0
+        return (
+            float(np.average(effects, weights=weights)),
+            len(effects),
+            int(np.sum(weights)),
+        )
+
+    rows = []
+    pair_number = 0
+    for human_family, human_frame in merged.groupby(family_column, sort=True):
+        for objective_family, score_column in objective_columns.items():
+            pair_number += 1
+            work = human_frame[
+                [subject_col, rater_col, rating_column, score_column]
+            ].copy()
+            work[rating_column] = pd.to_numeric(work[rating_column], errors="coerce")
+            work[score_column] = pd.to_numeric(work[score_column], errors="coerce")
+            work = work.dropna()
+            counts = work[rating_column].value_counts()
+            effect, raters_estimable, comparison_pairs = stratified_effect(work, score_column)
+
+            def statistic(sample: pd.DataFrame) -> float:
+                value, _, _ = stratified_effect(sample, score_column)
+                return value
+
+            low, high, successful = cluster_bootstrap(
+                work,
+                cluster_col=subject_col,
+                statistic=statistic,
+                replicates=bootstrap_replicates,
+                seed=seed + pair_number,
+            )
+            pooled_auc = (
+                float(_roc_auc(work[rating_column], work[score_column]))
+                if len(counts) == 2
+                else np.nan
+            )
+            supported_participants = work[subject_col].nunique() >= minimum_participants
+            estimable = bool(
+                np.isfinite(effect) and successful > 0 and supported_participants
+            )
+            rows.append(
+                {
+                    "label_system": label_system,
+                    "human_family": human_family,
+                    "objective_family": objective_family,
+                    "matched_family": human_family == objective_family,
+                    "effect_type": "rater_stratified_rank_biserial",
+                    "effect": effect,
+                    "ci_low": low,
+                    "ci_high": high,
+                    "pooled_auc_secondary": pooled_auc,
+                    "n_recordings": len(work),
+                    "n_participants": work[subject_col].nunique(),
+                    "positive_recordings": int(counts.get(1, 0)),
+                    "negative_recordings": int(counts.get(0, 0)),
+                    "raters_total": work[rater_col].nunique(),
+                    "raters_estimable": raters_estimable,
+                    "positive_negative_comparison_pairs": comparison_pairs,
+                    "bootstrap_successful": successful,
+                    "estimable": estimable,
+                    "reason": (
+                        ""
+                        if estimable
+                        else (
+                            "insufficient_participants"
+                            if not supported_participants
+                            else "fewer_than_two_raters_with_supported_within_rater_classes"
+                        )
+                    ),
+                    "objective_direction": "higher_is_worse",
+                    "human_direction": "artifact_present_is_1",
+                }
+            )
+    return pd.DataFrame(rows)
+
+
 def matched_family_specificity(
     family_indices: pd.DataFrame,
     labels: pd.DataFrame,

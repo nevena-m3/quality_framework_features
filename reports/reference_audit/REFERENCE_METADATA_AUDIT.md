@@ -2,7 +2,9 @@
 
 Audit date: 2026-07-23  
 Inputs: `Bamboo(1).xlsx`, `Rest(1).xlsx`, `Rest_Bamboo(1).xlsx`  
-Scope: workbook integrity plus schema review of four example detailed annotation exports; native audio files and the complete crossed four-RA QC set were not attached to this environment
+Scope: workbook integrity plus schema review of four example detailed annotation exports;
+native audio and the complete local distributed/crossed annotation folders were not
+attached to this environment
 
 ## Detailed annotation example audit
 
@@ -14,7 +16,7 @@ intervals. The examples contain one annotation layer each and no `rater_id` fiel
 Consequences:
 
 - the CSV filename stem is a recording identifier and must never be treated as a rater;
-- rater identity must be supplied by a manifest or validated one-subfolder-per-RA design;
+- rater identity must come from the validated named RA subfolders;
 - agreement requires multiple independent RAs to annotate the same recordings;
 - interval unions must be used for duration/fraction so overlapping subcategories are not
   double-counted;
@@ -91,6 +93,8 @@ The following fields are 100% missing in all three exports and cannot support an
 3. Compare paired WAV/WEBM duration and native content; establish which encoding is the source derivative.
 4. Decode every file and retain all warnings/errors; no silent row loss.
 5. Run support-aware segmentation and stratified visual review before metric extraction is accepted.
-6. Import the complete four-RA files, resolve rater identity through the manifest, confirm independence/rubric version, and quantify agreement on the crossed four-rater subset before consensus.
+6. Import the four distributed main RA folders separately from
+   `Reliability/<RA name>/`; confirm assignment independence/rubric version and quantify
+   agreement only on complete crossed four-rater Reliability items before consensus.
 
 Detailed row-level ledgers are generated locally by `paper1-qc audit`; they are intentionally not embedded in this portable repository because they contain participant/file identifiers.

@@ -46,6 +46,7 @@ from .statistics import (
     participant_level_group_contrasts,
     participant_persistence,
     perceptual_links,
+    rater_stratified_family_alignment,
 )
 
 
@@ -541,6 +542,538 @@ def command_encoding_sensitivity(cfg: dict) -> None:
     )
 
 
+def _has_import_errors(issues: pd.DataFrame) -> bool:
+    return (
+        not issues.empty
+        and issues.get("severity", pd.Series(dtype="string"))
+        .astype(str)
+        .str.casefold()
+        .eq("error")
+        .any()
+    )
+
+
+def _rater_workload_and_prevalence(ratings: pd.DataFrame) -> pd.DataFrame:
+    if ratings.empty:
+        return pd.DataFrame(
+            columns=[
+                "rater_id",
+                "category",
+                "n_recordings",
+                "positive_recordings",
+                "negative_recordings",
+                "positive_prevalence",
+            ]
+        )
+    work = ratings.copy()
+    work["rating_numeric"] = pd.to_numeric(work["rating"], errors="coerce")
+    summary = (
+        work.groupby(["rater_id", "category"], as_index=False)
+        .agg(
+            n_recordings=("file_name", "nunique"),
+            positive_recordings=("rating_numeric", lambda values: int((values == 1).sum())),
+            negative_recordings=("rating_numeric", lambda values: int((values == 0).sum())),
+            positive_prevalence=("rating_numeric", "mean"),
+        )
+    )
+    return summary
+
+
+def _distributed_design_summary(
+    ratings: pd.DataFrame,
+    *,
+    expected_raters: int,
+    expected_rater_names: list[str],
+) -> tuple[pd.DataFrame, pd.DataFrame, bool]:
+    coverage, _ = rating_design_coverage(ratings, expected_raters=expected_raters)
+    observed = sorted(ratings["rater_id"].dropna().astype(str).unique())
+    expected = sorted(map(str, expected_rater_names))
+    names_match = not expected or observed == expected
+    one_per_item = not coverage.empty and coverage["n_raters"].eq(1).all()
+    total_match = len(observed) == expected_raters
+    valid = bool(one_per_item and total_match and names_match)
+    summary = (
+        coverage.groupby("category", as_index=False)
+        .agg(
+            items_total=("file_name", "nunique"),
+            minimum_raters_per_item=("n_raters", "min"),
+            maximum_raters_per_item=("n_raters", "max"),
+        )
+        if not coverage.empty
+        else pd.DataFrame(
+            columns=[
+                "category",
+                "items_total",
+                "minimum_raters_per_item",
+                "maximum_raters_per_item",
+            ]
+        )
+    )
+    summary["expected_raters_across_study"] = expected_raters
+    summary["observed_rater_ids"] = "|".join(observed)
+    summary["configured_rater_ids"] = "|".join(expected)
+    summary["rater_names_match_configuration"] = names_match
+    summary["design_status"] = (
+        "valid_distributed_single_independent_rating"
+        if valid
+        else "blocked_distributed_design_mismatch"
+    )
+    return coverage, summary, valid
+
+
+def _broad_metadata_labels(
+    features: pd.DataFrame, broad: dict
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    direction_rows = [
+        {
+            "family": family,
+            "metadata_column": column,
+            "absent_value": broad.get("absent_value", "No"),
+            "present_value": broad.get("present_value", "Yes"),
+            "normalized_absent": 0,
+            "normalized_present": 1,
+            "direction": "higher_is_worse",
+            "direction_confirmed": bool(broad.get("direction_confirmed", False)),
+            "individual_ra_ratings_available": False,
+            "reliability_estimable": False,
+        }
+        for family, column in broad.get("family_columns", {}).items()
+    ]
+    direction_audit = pd.DataFrame(direction_rows)
+    if not broad.get("family_columns") or not broad.get("direction_confirmed", False):
+        return pd.DataFrame(), direction_audit
+
+    label_rows = []
+    value_map = {
+        str(broad.get("absent_value", "No")).strip().upper(): 0,
+        str(broad.get("present_value", "Yes")).strip().upper(): 1,
+    }
+    for family, column in broad["family_columns"].items():
+        if column not in features:
+            continue
+        normalized = features[column].astype("string").str.strip().str.upper().map(value_map)
+        for index in features.index[normalized.notna()]:
+            label_rows.append(
+                {
+                    "file_name": features.loc[index, "file_name"],
+                    "category": family,
+                    "consensus_rating": int(normalized.loc[index]),
+                    "consensus_method": (
+                        "merged_two_ra_metadata_label_individual_ratings_unavailable"
+                    ),
+                }
+            )
+    return pd.DataFrame(label_rows), direction_audit
+
+
+def _command_human_qc_distributed(
+    cfg: dict,
+    schema: dict,
+    *,
+    source: Path,
+    output: Path,
+    input_paths: list[Path],
+) -> None:
+    """Analyze distributed main ratings and a separate crossed reliability subset."""
+    expected_raters = int(schema.get("expected_raters", 4))
+    expected_names = list(schema.get("rater_directory_names", []))
+    reliability_name = str(schema.get("reliability_subdirectory", "Reliability"))
+    rater_strategy = schema.get("rater_strategy", "parent_directory")
+    parser_kwargs = {
+        "rater_strategy": rater_strategy,
+        "family_map": schema.get("family_map"),
+        "context_columns": schema.get("context_columns"),
+        "interval_time_base": schema.get("interval_time_base", "absolute"),
+        "rater_directory_names": expected_names or None,
+    }
+
+    ratings, context, intervals, issues = load_interval_human_qc(
+        source,
+        exclude_path_parts=[reliability_name],
+        **parser_kwargs,
+    )
+    _write_table(ratings, output / "main_distributed_ratings_long")
+    _write_table(ratings, output / "ratings_long")
+    _write_table(context, output / "main_context_annotations_not_family_alignment")
+    _write_table(context, output / "context_annotations_not_family_alignment")
+    _write_table(intervals, output / "main_annotation_intervals_long")
+    _write_table(intervals, output / "annotation_intervals_long")
+    _write_table(issues, output / "main_import_issues")
+    _write_table(issues, output / "import_issues")
+    _write_table(
+        ratings[
+            [
+                "file_name",
+                "rater_id",
+                "category",
+                "annotated_duration_sec",
+                "annotated_fraction",
+                "recording_duration_sec",
+            ]
+        ],
+        output / "main_distributed_extent_labels_secondary",
+    )
+    main_coverage, main_design, main_valid = _distributed_design_summary(
+        ratings,
+        expected_raters=expected_raters,
+        expected_rater_names=expected_names,
+    )
+    _write_table(main_coverage, output / "main_distributed_item_coverage")
+    _write_table(main_coverage, output / "rating_design_item_coverage")
+    _write_table(main_design, output / "main_distributed_design_summary")
+    _write_table(main_design, output / "rating_design_summary")
+    main_marginals = _rater_workload_and_prevalence(ratings)
+    _write_table(main_marginals, output / "main_rater_workload_and_prevalence")
+
+    if _has_import_errors(issues) or not main_valid:
+        write_run_manifest(
+            output / "run_manifest.json",
+            command=sys.argv,
+            config_path=cfg["_config_path"],
+            input_paths=input_paths,
+            extra={
+                "status": "blocked_main_distributed_design",
+                "reason": (
+                    "main_import_errors"
+                    if _has_import_errors(issues)
+                    else "main_rater_or_item_coverage_mismatch"
+                ),
+            },
+        )
+        raise ValueError(
+            "Main detailed human-QC import is blocked. Review main_import_issues.csv "
+            "and main_distributed_design_summary.csv."
+        )
+
+    main_labels = ratings[
+        ["file_name", "rater_id", "category", "rating"]
+    ].rename(columns={"rating": "consensus_rating"})
+    main_labels["consensus_method"] = (
+        "single_independent_rater_in_distributed_four_ra_design"
+    )
+    main_labels["n_ratings"] = 1
+    _write_table(main_labels, output / "main_distributed_family_labels")
+
+    dataset_root = _output_root(cfg) / "03_dataset_assembly"
+    features = _read_existing(dataset_root, "paper1_analysis_dataset")
+    features = features.loc[features["primary_measurement_eligible"].fillna(False)].copy()
+    family_indices, index_audit = direction_oriented_family_indices(features)
+    _write_table(family_indices, output / "direction_oriented_q_family_indices_secondary")
+    _write_table(index_audit, output / "q_family_index_orientation_audit")
+
+    bootstrap_replicates = cfg["analysis"]["bootstrap_replicates"]
+    seed = cfg["project"]["random_seed"]
+    minimum_class = cfg["analysis"]["minimum_human_class_recordings"]
+    minimum_participants = cfg["analysis"]["minimum_human_class_participants"]
+    main_alignment = rater_stratified_family_alignment(
+        family_indices,
+        main_labels,
+        label_system="distributed_four_ra_single_rating_rater_stratified",
+        minimum_class_recordings_per_rater=minimum_class,
+        minimum_participants=minimum_participants,
+        bootstrap_replicates=bootstrap_replicates,
+        seed=seed,
+    )
+    _write_table(
+        main_alignment,
+        output / "main_distributed_rater_stratified_family_alignment",
+    )
+    pooled_main_alignment = family_alignment_matrix(
+        family_indices,
+        main_labels,
+        label_system="distributed_four_ra_pooled_single_label_sensitivity",
+        minimum_class_recordings=minimum_class,
+        minimum_participants=minimum_participants,
+        bootstrap_replicates=bootstrap_replicates,
+        seed=seed,
+    )
+    _write_table(
+        pooled_main_alignment,
+        output / "main_distributed_pooled_family_alignment_sensitivity",
+    )
+    pooled_specificity = matched_family_specificity(
+        family_indices,
+        main_labels,
+        label_system="distributed_four_ra_pooled_single_label_sensitivity",
+        minimum_class_recordings=minimum_class,
+        bootstrap_replicates=bootstrap_replicates,
+        seed=seed,
+    )
+    _write_table(
+        pooled_specificity,
+        output / "main_distributed_pooled_matched_family_specificity_sensitivity",
+    )
+    if schema.get("perceptual_metric_map"):
+        links = perceptual_links(
+            features,
+            main_labels,
+            schema["perceptual_metric_map"],
+            bootstrap_replicates=bootstrap_replicates,
+            seed=seed,
+        )
+        _write_table(
+            links,
+            output / "main_distributed_feature_level_links_pooled_secondary",
+        )
+
+    reliability_root = source / reliability_name
+    reliability_consensus = pd.DataFrame()
+    reliability_status = "not_found"
+    if reliability_root.exists() and any(reliability_root.rglob("*.csv")):
+        input_paths.append(reliability_root)
+        rel_ratings, rel_context, rel_intervals, rel_issues = load_interval_human_qc(
+            reliability_root,
+            **parser_kwargs,
+        )
+        _write_table(rel_ratings, output / "reliability_ratings_long")
+        _write_table(rel_context, output / "reliability_context_annotations_not_family_alignment")
+        _write_table(rel_intervals, output / "reliability_annotation_intervals_long")
+        _write_table(rel_issues, output / "reliability_import_issues")
+        rel_coverage, rel_design = rating_design_coverage(
+            rel_ratings, expected_raters=expected_raters
+        )
+        _write_table(rel_coverage, output / "reliability_item_coverage")
+        _write_table(rel_design, output / "reliability_design_summary")
+        _write_table(
+            _rater_workload_and_prevalence(rel_ratings),
+            output / "reliability_rater_workload_and_prevalence",
+        )
+        observed_rel_names = sorted(rel_ratings["rater_id"].dropna().astype(str).unique())
+        configured_rel_names = sorted(map(str, expected_names))
+        rel_names_valid = (
+            len(observed_rel_names) == expected_raters
+            and (not configured_rel_names or observed_rel_names == configured_rel_names)
+        )
+        complete_keys = rel_coverage.loc[
+            rel_coverage["complete_expected_raters"], ["file_name", "category"]
+        ]
+        complete_rel = rel_ratings.merge(
+            complete_keys,
+            on=["file_name", "category"],
+            how="inner",
+            validate="many_to_one",
+        )
+        rel_valid = (
+            not _has_import_errors(rel_issues)
+            and rel_names_valid
+            and not complete_rel.empty
+        )
+        reliability_status = (
+            "complete_subset_estimable"
+            if rel_valid
+            else "blocked_import_rater_or_coverage_error"
+        )
+        _write_table(
+            pd.DataFrame(
+                [
+                    {
+                        "status": reliability_status,
+                        "expected_raters": expected_raters,
+                        "observed_rater_ids": "|".join(observed_rel_names),
+                        "configured_rater_ids": "|".join(configured_rel_names),
+                        "unique_files_imported": rel_ratings["file_name"].nunique(),
+                        "complete_file_family_items": len(complete_keys),
+                        "incomplete_file_family_items": int(
+                            (~rel_coverage["complete_expected_raters"]).sum()
+                        ),
+                        "primary_agreement_uses_complete_items_only": True,
+                    }
+                ]
+            ),
+            output / "reliability_analysis_status",
+        )
+        if rel_valid:
+            agreement = agreement_summary(
+                complete_rel,
+                bootstrap_replicates=bootstrap_replicates,
+                seed=seed,
+            )
+            agreement_sensitivity = agreement_summary(
+                rel_ratings,
+                bootstrap_replicates=bootstrap_replicates,
+                seed=seed,
+            )
+            reliability_consensus = make_consensus(
+                rel_ratings,
+                expected_raters=expected_raters,
+                minimum_ratings=expected_raters,
+            )
+            consensus_three = make_consensus(
+                rel_ratings,
+                expected_raters=expected_raters,
+                minimum_ratings=max(2, expected_raters - 1),
+            )
+            extent_consensus = make_extent_consensus(
+                rel_ratings,
+                expected_raters=expected_raters,
+                minimum_ratings=expected_raters,
+            )
+            _write_table(agreement, output / "reliability_interrater_agreement_complete")
+            _write_table(
+                agreement_sensitivity,
+                output / "reliability_interrater_agreement_incomplete_sensitivity",
+            )
+            _write_table(
+                reliability_consensus,
+                output / "reliability_four_ra_consensus_primary",
+            )
+            _write_table(
+                consensus_three,
+                output / "reliability_four_ra_consensus_three_of_four_sensitivity",
+            )
+            _write_table(
+                extent_consensus,
+                output / "reliability_four_ra_extent_consensus_secondary",
+            )
+            rel_alignment = family_alignment_matrix(
+                family_indices,
+                reliability_consensus,
+                label_system="crossed_reliability_four_ra_consensus",
+                minimum_class_recordings=minimum_class,
+                minimum_participants=minimum_participants,
+                bootstrap_replicates=bootstrap_replicates,
+                seed=seed,
+            )
+            _write_table(
+                rel_alignment,
+                output / "reliability_four_ra_consensus_family_alignment",
+            )
+            rel_specificity = matched_family_specificity(
+                family_indices,
+                reliability_consensus,
+                label_system="crossed_reliability_four_ra_consensus",
+                minimum_class_recordings=minimum_class,
+                bootstrap_replicates=bootstrap_replicates,
+                seed=seed,
+            )
+            _write_table(
+                rel_specificity,
+                output / "reliability_four_ra_consensus_matched_family_specificity",
+            )
+            shared_main_rel = sorted(
+                set(main_labels["category"].dropna())
+                & set(reliability_consensus["category"].dropna())
+                & {
+                    column.removeprefix("qfamily__")
+                    for column in family_indices.columns
+                    if column.startswith("qfamily__")
+                }
+            )
+            if shared_main_rel:
+                main_rel_comparison = compare_binary_label_systems(
+                    family_indices,
+                    main_labels,
+                    reliability_consensus,
+                    label_a_name="distributed_main_single_rating",
+                    label_b_name="crossed_reliability_four_ra_consensus",
+                    shared_families=shared_main_rel,
+                    minimum_class_recordings=minimum_class,
+                    bootstrap_replicates=bootstrap_replicates,
+                    seed=seed,
+                )
+                _write_table(
+                    main_rel_comparison,
+                    output / "main_distributed_vs_reliability_consensus_paired_alignment",
+                )
+    else:
+        _write_table(
+            pd.DataFrame(
+                [
+                    {
+                        "status": "not_found",
+                        "expected_path": str(reliability_root),
+                        "required_layout": (
+                            "Reliability/<RA name>/*_segments.csv with the same files "
+                            "independently rated by all four RAs"
+                        ),
+                    }
+                ]
+            ),
+            output / "reliability_analysis_status",
+        )
+
+    broad = schema.get("broad_metadata", {})
+    broad_labels, direction_audit = _broad_metadata_labels(features, broad)
+    _write_table(direction_audit, output / "two_ra_broad_direction_and_scale_audit")
+    comparison_targets: list[tuple[str, pd.DataFrame]] = [
+        ("main_distributed", main_labels)
+    ]
+    if not reliability_consensus.empty:
+        comparison_targets.append(("reliability_four_ra_consensus", reliability_consensus))
+    if not broad_labels.empty:
+        _write_table(broad_labels, output / "two_ra_broad_family_labels_normalized")
+        broad_alignment = family_alignment_matrix(
+            family_indices,
+            broad_labels,
+            label_system="two_ra_broad_merged_metadata",
+            minimum_class_recordings=minimum_class,
+            minimum_participants=minimum_participants,
+            bootstrap_replicates=bootstrap_replicates,
+            seed=seed,
+        )
+        _write_table(broad_alignment, output / "two_ra_broad_family_alignment_matrix")
+        for target_name, target_labels in comparison_targets:
+            shared = sorted(
+                set(target_labels["category"].dropna())
+                & set(broad_labels["category"].dropna())
+                & {
+                    column.removeprefix("qfamily__")
+                    for column in family_indices.columns
+                    if column.startswith("qfamily__")
+                }
+            )
+            comparison = compare_binary_label_systems(
+                family_indices,
+                target_labels,
+                broad_labels,
+                label_a_name=target_name,
+                label_b_name="two_ra_broad_merged_metadata",
+                shared_families=shared,
+                minimum_class_recordings=minimum_class,
+                bootstrap_replicates=bootstrap_replicates,
+                seed=seed,
+            )
+            _write_table(
+                comparison,
+                output / f"{target_name}_vs_two_ra_paired_alignment",
+            )
+    elif broad.get("family_columns"):
+        blocked = pd.DataFrame(
+            [
+                {
+                    "status": "blocked",
+                    "reason": "broad_metadata_direction_not_confirmed",
+                    "required_action": (
+                        "Confirm Yes=artifact present and No=artifact absent in the RA "
+                        "codebook, then set broad_metadata.direction_confirmed: true."
+                    ),
+                }
+            ]
+        )
+        for target_name, _ in comparison_targets:
+            _write_table(
+                blocked,
+                output / f"{target_name}_vs_two_ra_paired_alignment",
+            )
+
+    write_run_manifest(
+        output / "run_manifest.json",
+        command=sys.argv,
+        config_path=cfg["_config_path"],
+        input_paths=input_paths,
+        extra={
+            "status": "completed",
+            "rating_design": "distributed_main_with_crossed_reliability_subset",
+            "expected_raters": expected_raters,
+            "reliability_status": reliability_status,
+            "main_estimand": "within_rater_stratified_family_alignment",
+            "reliability_estimand": "complete_four_ra_agreement_and_consensus_alignment",
+            "family_alignment_not_source_alignment": True,
+            "rest_role": "exact_session_contextual_sensitivity_not_primary_goal4_labels",
+        },
+    )
+
+
 def command_human_qc(cfg: dict, schema_path: str | None) -> None:
     root = _output_root(cfg)
     output = root / "04_analysis" / "human_qc"
@@ -549,12 +1082,31 @@ def command_human_qc(cfg: dict, schema_path: str | None) -> None:
         with Path(schema_path).open("r", encoding="utf-8") as handle:
             schema = yaml.safe_load(handle) or {}
     source = resolve_data_path(cfg, "detailed_human_qc")
+    rating_design = schema.get("rating_design", "distributed_single_rating")
     expected_raters = int(schema.get("expected_raters", 4))
     minimum_primary_ratings = int(schema.get("minimum_primary_ratings", expected_raters))
     minimum_sensitivity_ratings = int(
         schema.get("minimum_sensitivity_ratings", max(2, expected_raters - 1))
     )
     input_paths: list[Path] = [source]
+
+    if rating_design in {
+        "distributed_single_rating",
+        "distributed_with_crossed_reliability",
+    }:
+        if schema.get("format", "interval_json") != "interval_json":
+            raise ValueError(
+                "The distributed-with-reliability workflow currently requires "
+                "format: interval_json."
+            )
+        _command_human_qc_distributed(
+            cfg,
+            schema,
+            source=source,
+            output=output,
+            input_paths=input_paths,
+        )
+        return
 
     if schema.get("format", "interval_json") == "interval_json":
         manifest_path = schema.get("rater_manifest")
@@ -573,12 +1125,27 @@ def command_human_qc(cfg: dict, schema_path: str | None) -> None:
         )
         _write_table(annotation_intervals, output / "annotation_intervals_long")
         _write_table(context_ratings, output / "context_annotations_not_family_alignment")
-        extent_consensus = make_extent_consensus(
-            ratings,
-            expected_raters=expected_raters,
-            minimum_ratings=minimum_primary_ratings,
-        )
-        _write_table(extent_consensus, output / "four_ra_extent_consensus_secondary")
+        if rating_design == "distributed_single_rating":
+            _write_table(
+                ratings[
+                    [
+                        "file_name",
+                        "rater_id",
+                        "category",
+                        "annotated_duration_sec",
+                        "annotated_fraction",
+                        "recording_duration_sec",
+                    ]
+                ],
+                output / "distributed_four_ra_extent_labels_secondary",
+            )
+        else:
+            extent_consensus = make_extent_consensus(
+                ratings,
+                expected_raters=expected_raters,
+                minimum_ratings=minimum_primary_ratings,
+            )
+            _write_table(extent_consensus, output / "four_ra_extent_consensus_secondary")
     else:
         kwargs = {
             key: schema[key]
@@ -1056,7 +1623,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     human = subparsers.add_parser(
         "human-qc",
-        help="Audit four-RA interval annotations and run family-level 4RA/2RA alignment",
+        help=(
+            "Audit distributed main and crossed reliability annotations, then run "
+            "family-level detailed/2RA alignment"
+        ),
     )
     human.add_argument("--schema", default=None)
     return parser

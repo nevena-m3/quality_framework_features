@@ -6,6 +6,7 @@ from paper1_qc.statistics import (
     direction_oriented_family_indices,
     family_alignment_matrix,
     matched_family_specificity,
+    rater_stratified_family_alignment,
 )
 
 
@@ -73,3 +74,27 @@ def test_family_alignment_and_paired_label_system_comparison():
         bootstrap_replicates=20,
     )
     assert comparison.loc[0, "delta_auc_a_minus_b"] > 0
+
+
+def test_distributed_alignment_is_estimated_within_rater():
+    frame = _feature_frame(n=40)
+    indices, _ = direction_oriented_family_indices(frame)
+    labels = pd.DataFrame(
+        {
+            "file_name": frame["file_name"],
+            "rater_id": ["r1"] * 20 + ["r2"] * 20,
+            "category": "additive_interference",
+            "rating": ([0] * 10 + [1] * 10) * 2,
+        }
+    )
+    result = rater_stratified_family_alignment(
+        indices,
+        labels,
+        label_system="distributed",
+        minimum_class_recordings_per_rater=3,
+        bootstrap_replicates=30,
+    )
+    matched = result.loc[result["matched_family"]].iloc[0]
+    assert matched["raters_estimable"] == 2
+    assert matched["effect"] > 0.95
+    assert matched["estimable"]

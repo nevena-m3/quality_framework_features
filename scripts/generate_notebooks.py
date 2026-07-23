@@ -17,7 +17,7 @@ def find_project_root():
     for candidate in [Path.cwd(), *Path.cwd().parents]:
         if (candidate / 'pyproject.toml').exists():
             return candidate
-    raise FileNotFoundError('Run this notebook from inside the paper1_pipeline_rebuilt project.')
+    raise FileNotFoundError('Run this notebook from inside the paper_1 project.')
 
 ROOT = find_project_root()
 CONFIG = ROOT / 'config' / 'project.yaml'
@@ -157,10 +157,10 @@ write_notebook(
 )
 write_notebook(
     "notebooks/04_analysis/08_study_goal_4_perceptual_family_alignment.ipynb",
-    "08 — Goal 4: four-RA perceptual family alignment",
-    "Audits the independent four-RA interval labels, forms complete-design consensus after agreement, and compares matched Q-family alignment with the separate merged two-RA metadata workflow.",
+    "08 — Goal 4: perceptual family alignment and reliability",
+    "Audits the distributed one-RA-per-recording main labels separately from the crossed four-RA Reliability subset, then compares matched Q-family alignment with the merged two-RA metadata workflow.",
     [
-        markdown("Review and copy both human-QC configuration examples. Rater identity must be explicit, and broad-label direction must be confirmed from the RA codebook."),
+        markdown("Review and copy the human-QC schema. The four declared RA folders identify main assignments; Reliability/<RA name>/ must contain the shared crossed subset. Confirm broad-label direction from the RA codebook."),
         cli_cell("human-qc --schema config/human_qc_schema.yaml"),
     ],
 )

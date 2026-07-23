@@ -6,14 +6,13 @@ Keep the code outside the data directory. One suitable layout is:
 
 ```text
 C:\Users\musikicn\Desktop\Nevena_project\
-  paper1_pipeline_rebuilt\
+  paper_1\
   Data_13072026\
 ```
 
-Extract the supplied ZIP as `paper1_pipeline_rebuilt`. Do not place audio, metadata
-workbooks, RA exports, generated outputs, or `config/project.yaml` in Git. The included
-`.gitignore` blocks the common forms, but `git status` must still be reviewed before every
-commit.
+Use your cloned `paper_1` repository for the code. Do not place audio, metadata workbooks,
+RA exports, generated outputs, or `config/project.yaml` in Git. The included `.gitignore`
+blocks the common forms, but `git status` must still be reviewed before every commit.
 
 ## 2. Install the prerequisites
 
@@ -39,7 +38,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ## 3. Create the Python environment
 
 ```powershell
-cd "C:\Users\musikicn\Desktop\Nevena_project\paper1_pipeline_rebuilt"
+cd "C:\Users\musikicn\Desktop\Nevena_project\paper_1"
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
@@ -54,8 +53,8 @@ registered core reverberation-tail metrics do not depend on SRMR.
 ```powershell
 Copy-Item config\project.example.yaml config\project.yaml
 Copy-Item config\human_qc_schema.example.yaml config\human_qc_schema.yaml
-Copy-Item config\human_qc_manifest.example.csv config\human_qc_manifest.csv
 notepad config\project.yaml
+notepad config\human_qc_schema.yaml
 ```
 
 The example data root is already:
@@ -64,23 +63,25 @@ The example data root is already:
 C:\Users\musikicn\Desktop\Nevena_project\Data_13072026
 ```
 
-Check that the directory names and workbook filenames exactly match the local data. Then
-complete `human_qc_manifest.csv` with one row per detailed annotation export and the
-independent `rater_id`.
+Check that directory names and workbook filenames exactly match the local data. The
+human-QC schema is preconfigured for:
 
-If the HumanQC directory is organized as one subfolder per RA, generate the manifest:
-
-```powershell
-python scripts\build_human_qc_manifest.py `
-  --root "C:\Users\musikicn\Desktop\Nevena_project\Data_13072026\Bamboo_passage_HumanQC" `
-  --output config\human_qc_manifest.csv `
-  --rater-from-parent `
-  --force
+```text
+Bamboo_passage_HumanQC\
+  Abbas\
+  Liya\
+  Samaana\
+  Samara\
+  Reliability\
+    Abbas\
+    Liya\
+    Samaana\
+    Samara\
 ```
 
-Open the resulting CSV and verify several paths against the actual RA assignment. If the
-files are all in one flat folder, the script deliberately leaves `rater_id` blank; rater
-identity must then be filled from the annotation assignment record.
+Do not create a manifest for this layout. The four top-level RA folders contain different
+main files (one independent RA per recording). The four `Reliability` folders contain the
+same approximately 70 recordings rated independently by all four RAs.
 
 Before the 2RA comparison, verify the broad-QC codebook. If and only if `Yes` means that
 the artifact is present and `No` means it is absent, change:
@@ -124,14 +125,29 @@ Run Goal 4 last:
 paper1-qc --config config/project.yaml human-qc --schema config/human_qc_schema.yaml
 ```
 
-This command blocks rather than estimating agreement when rater identity is unresolved or
-no recording has the expected four independent ratings.
+This command verifies the top-level distributed design separately from the crossed
+Reliability design. It estimates main-set family alignment within rater; only complete
+four-rater Reliability items enter primary agreement and consensus. Deviations are saved
+as audit tables rather than silently pooled.
 
 ## 6. Run the visualization notebooks
 
+From a new PowerShell window:
+
 ```powershell
-jupyter lab visualization
+cd "C:\Users\musikicn\Desktop\Nevena_project\paper_1"
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\Activate.ps1
+python -m ipykernel install --user --name paper1-qc --display-name "Paper 1 QC"
+jupyter lab
 ```
+
+In JupyterLab, double-click the `visualization` folder, open
+`00_preflight_and_run_order.ipynb`, select **Kernel → Change Kernel → Paper 1 QC**, change
+`RUN_PIPELINE_STAGES = False` to `True`, and choose **Run → Run All Cells**. Review every
+red/error audit row before opening the next notebook. This first notebook also counts the
+main files per RA and verifies that every Reliability export filename is present under
+all four RA folders before any agreement statistic is attempted.
 
 Open and run:
 
@@ -145,9 +161,10 @@ Open and run:
 06_results_registry_and_manuscript_tables.ipynb
 ```
 
-On a first analysis run, set the notebook's `RUN_...` switch to `True`. For a frozen
-reporting rerun, leave it `False` and use the saved stage outputs. Figures and tables are
-written to `outputs\visualization`.
+On a first analysis run, set each notebook's `RUN_...` switch to `True`. Run one notebook
+at a time in the listed order; segmentation and extraction can be long-running. For a
+frozen reporting rerun, leave the switches `False` and use the saved stage outputs.
+Figures and tables are written to `outputs\visualization`.
 
 ## 7. Run automated checks
 
@@ -162,7 +179,7 @@ Create an empty **private** repository on GitHub. Do not initialize it with a RE
 license, or `.gitignore`, because those files already exist locally. Then:
 
 ```powershell
-cd "C:\Users\musikicn\Desktop\Nevena_project\paper1_pipeline_rebuilt"
+cd "C:\Users\musikicn\Desktop\Nevena_project\paper_1"
 git init
 git branch -M main
 git add .

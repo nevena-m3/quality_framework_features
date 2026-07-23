@@ -45,7 +45,7 @@ def find_project_root():
     for candidate in [Path.cwd(), *Path.cwd().parents]:
         if (candidate / "pyproject.toml").exists() and (candidate / "src" / "paper1_qc").exists():
             return candidate
-    raise FileNotFoundError("Open Jupyter from inside paper1_pipeline_rebuilt.")
+    raise FileNotFoundError("Open Jupyter from inside the paper_1 project.")
 
 ROOT = find_project_root()
 CONFIG = ROOT / "config" / "project.yaml"
@@ -73,6 +73,13 @@ def read_stage(relative_without_suffix):
         except pd.errors.EmptyDataError:
             return pd.DataFrame()
     raise FileNotFoundError(f"Missing required stage table: {parquet} or {csv}")
+
+def read_optional_stage(relative_without_suffix):
+    stem = OUTPUT / relative_without_suffix
+    if stem.with_suffix(".parquet").exists() or stem.with_suffix(".csv").exists():
+        return read_stage(relative_without_suffix)
+    print("OPTIONAL TABLE NOT AVAILABLE:", relative_without_suffix)
+    return pd.DataFrame()
 
 def run_cli(*arguments):
     command = [sys.executable, "-m", "paper1_qc.cli", "--config", str(CONFIG), *arguments]
@@ -174,6 +181,84 @@ media_summary = pd.DataFrame({
 })
 save_table(media_summary, "00_preflight", "media_inventory_summary")
 display(media_summary)
+"""
+        ),
+        code(
+            r"""# Human-QC folder design can be checked before expensive signal processing.
+import yaml
+
+project_cfg = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
+schema_path = ROOT / "config" / "human_qc_schema.yaml"
+assert schema_path.exists(), "Copy config/human_qc_schema.example.yaml to config/human_qc_schema.yaml."
+human_schema = yaml.safe_load(schema_path.read_text(encoding="utf-8"))
+data_root = Path(project_cfg["paths"]["data_root"])
+human_root = data_root / project_cfg["paths"]["detailed_human_qc"]
+ra_names = human_schema["rater_directory_names"]
+reliability_root = human_root / human_schema.get("reliability_subdirectory", "Reliability")
+
+main_sets = {
+    ra: {path.name for path in (human_root / ra).rglob("*.csv")}
+    if (human_root / ra).exists() else set()
+    for ra in ra_names
+}
+reliability_sets = {
+    ra: {path.name for path in (reliability_root / ra).rglob("*.csv")}
+    if (reliability_root / ra).exists() else set()
+    for ra in ra_names
+}
+folder_counts = pd.DataFrame([
+    {
+        "rater_id": ra,
+        "main_csv_files": len(main_sets[ra]),
+        "reliability_csv_files": len(reliability_sets[ra]),
+        "main_directory_exists": (human_root / ra).exists(),
+        "reliability_directory_exists": (reliability_root / ra).exists(),
+    }
+    for ra in ra_names
+])
+save_table(folder_counts, "00_preflight", "human_qc_folder_counts")
+display(folder_counts)
+
+main_owners = {}
+for ra, names in main_sets.items():
+    for name in names:
+        main_owners.setdefault(name, []).append(ra)
+main_overlap = pd.DataFrame([
+    {"export_file": name, "n_main_raters": len(owners), "main_raters": "|".join(owners)}
+    for name, owners in sorted(main_owners.items()) if len(owners) > 1
+], columns=["export_file", "n_main_raters", "main_raters"])
+save_table(main_overlap, "00_preflight", "unexpected_main_assignment_overlap")
+
+reliability_union = set().union(*reliability_sets.values()) if reliability_sets else set()
+reliability_intersection = set.intersection(*reliability_sets.values()) if reliability_sets else set()
+reliability_gaps = pd.DataFrame([
+    {
+        "export_file": name,
+        "n_raters_present": sum(name in reliability_sets[ra] for ra in ra_names),
+        "missing_raters": "|".join(ra for ra in ra_names if name not in reliability_sets[ra]),
+    }
+    for name in sorted(reliability_union)
+    if any(name not in reliability_sets[ra] for ra in ra_names)
+], columns=["export_file", "n_raters_present", "missing_raters"])
+save_table(reliability_gaps, "00_preflight", "reliability_filename_coverage_gaps")
+
+design_check = pd.DataFrame([{
+    "main_files_have_one_assignment_by_export_name": len(main_overlap) == 0,
+    "reliability_union_files": len(reliability_union),
+    "reliability_files_common_to_all_four_raters": len(reliability_intersection),
+    "reliability_files_with_filename_coverage_gaps": len(reliability_gaps),
+    "primary_agreement_gate": (
+        "provisional_pass"
+        if len(reliability_intersection) > 0 and len(reliability_gaps) == 0
+        else "review_required"
+    ),
+}])
+save_table(design_check, "00_preflight", "human_qc_folder_design_check")
+display(design_check)
+if len(main_overlap):
+    display(main_overlap.head(50))
+if len(reliability_gaps):
+    display(reliability_gaps.head(50))
 """
         ),
         code(
@@ -769,13 +854,15 @@ if len(complete):
 write(
     "05_goal4_perceptual_family_alignment.ipynb",
     "05 — Goal 4: perceptual family alignment",
-    "Audits four independent RA annotations, evaluates matched family alignment, and compares the 4RA and merged 2RA systems on shared recordings.",
+    "Separates the distributed four-RA main annotations from the crossed 70-file reliability subset, evaluates family alignment, and compares both with merged broad 2RA labels.",
     [
         md(
             "Primary alignment excludes competing speech and non-task content because the "
             "estimand is family perceptual alignment, not source recognition. The broad "
             "metadata direction gate must be confirmed from the RA codebook before the "
-            "4RA-versus-2RA comparison runs."
+            "2RA comparison runs. The main annotation set has one independent RA per "
+            "recording; agreement and four-RA consensus are estimated only in "
+            "`Reliability/<RA name>/`, where the same files were rated by all four RAs."
         ),
         code(
             r"""RUN_GOAL_4 = False
@@ -786,102 +873,137 @@ else:
 """
         ),
         code(
-            r"""rating_coverage = read_stage("04_analysis/human_qc/rating_design_item_coverage")
-design_summary = read_stage("04_analysis/human_qc/rating_design_summary")
-ratings = read_stage("04_analysis/human_qc/ratings_long")
-agreement = read_stage("04_analysis/human_qc/interrater_agreement")
-consensus = read_stage("04_analysis/human_qc/four_ra_consensus_primary")
+            r"""main_coverage = read_stage("04_analysis/human_qc/main_distributed_item_coverage")
+main_design = read_stage("04_analysis/human_qc/main_distributed_design_summary")
+main_ratings = read_stage("04_analysis/human_qc/main_distributed_ratings_long")
+main_workload = read_stage("04_analysis/human_qc/main_rater_workload_and_prevalence")
+reliability_status = read_stage("04_analysis/human_qc/reliability_analysis_status")
+reliability_coverage = read_optional_stage("04_analysis/human_qc/reliability_item_coverage")
+reliability_ratings = read_optional_stage("04_analysis/human_qc/reliability_ratings_long")
+agreement = read_optional_stage("04_analysis/human_qc/reliability_interrater_agreement_complete")
+consensus = read_optional_stage("04_analysis/human_qc/reliability_four_ra_consensus_primary")
 direction_audit = read_stage("04_analysis/human_qc/two_ra_broad_direction_and_scale_audit")
 
 display(direction_audit)
 assert direction_audit["direction"].eq("higher_is_worse").all()
 save_table(direction_audit, "05_goal4", "direction_and_scale_audit")
-save_table(design_summary, "05_goal4", "four_ra_design_summary")
-display(design_summary)
+save_table(main_design, "05_goal4", "main_distributed_design_summary")
+save_table(main_workload, "05_goal4", "main_rater_workload_and_prevalence")
+save_table(reliability_status, "05_goal4", "reliability_analysis_status")
+display(main_design)
+display(main_workload)
+display(reliability_status)
 """
         ),
         code(
-            r"""# Coverage heatmap makes missing/rotating rater designs visible.
-coverage_matrix = (
-    ratings.assign(rated=1)
+            r"""# Main-set coverage: every recording-family should have exactly one RA.
+main_matrix = (
+    main_ratings.assign(rated=1)
     .pivot_table(index=["file_name", "category"], columns="rater_id", values="rated", aggfunc="max", fill_value=0)
 )
-save_table(coverage_matrix.reset_index(), "05_goal4", "four_ra_coverage_matrix")
-fig, ax = plt.subplots(figsize=(10, min(18, max(5, .08 * len(coverage_matrix)))))
-sns.heatmap(coverage_matrix, cmap=["#f2f2f2", "#4C78A8"], cbar=False, ax=ax)
-ax.set(title="Independent detailed-rating coverage", xlabel="Rater", ylabel="Recording × perceptual family")
+save_table(main_matrix.reset_index(), "05_goal4", "main_distributed_coverage_matrix")
+fig, ax = plt.subplots(figsize=(10, min(18, max(5, .08 * len(main_matrix)))))
+sns.heatmap(main_matrix, cmap=["#f2f2f2", "#4C78A8"], cbar=False, ax=ax)
+ax.set(title="Main distributed coverage: one RA per item", xlabel="Rater", ylabel="Recording × perceptual family")
 ax.tick_params(axis="y", labelleft=False)
-save_figure(fig, "05_goal4", "four_ra_rating_coverage")
+save_figure(fig, "05_goal4", "main_distributed_rating_coverage")
 plt.show()
+
+# Reliability coverage: every recording-family should have all four RAs.
+if not reliability_ratings.empty:
+    reliability_matrix = (
+        reliability_ratings.assign(rated=1)
+        .pivot_table(index=["file_name", "category"], columns="rater_id", values="rated", aggfunc="max", fill_value=0)
+    )
+    save_table(reliability_matrix.reset_index(), "05_goal4", "reliability_four_ra_coverage_matrix")
+    fig, ax = plt.subplots(figsize=(10, min(18, max(5, .08 * len(reliability_matrix)))))
+    sns.heatmap(reliability_matrix, cmap=["#f2f2f2", "#59A14F"], cbar=False, ax=ax)
+    ax.set(title="Crossed reliability coverage: four RAs per item", xlabel="Rater", ylabel="Recording × perceptual family")
+    ax.tick_params(axis="y", labelleft=False)
+    save_figure(fig, "05_goal4", "reliability_four_ra_rating_coverage")
+    plt.show()
 """
         ),
         code(
-            r"""# Prevalence is shown beside agreement because sparse categories can distort kappa.
-prevalence = (
-    consensus.groupby("category")["consensus_rating"]
+            r"""# Reliability prevalence is shown beside agreement because imbalance can depress kappa.
+if not consensus.empty and not agreement.empty:
+    prevalence = (
+        consensus.groupby("category")["consensus_rating"]
     .agg(
         n_consensus="count",
         positive=lambda x: int(pd.to_numeric(x, errors="coerce").sum()),
         prevalence=lambda x: float(pd.to_numeric(x, errors="coerce").mean()),
     ).reset_index()
-)
-agreement_view = agreement.merge(prevalence, on="category", how="left")
-save_table(agreement_view, "05_goal4", "agreement_and_prevalence")
-display(agreement_view)
+    )
+    agreement_view = agreement.merge(prevalence, on="category", how="left")
+    save_table(agreement_view, "05_goal4", "reliability_agreement_and_prevalence")
+    display(agreement_view)
 
-fig, axes = plt.subplots(1, 2, figsize=(13, 5))
-sns.barplot(data=prevalence, x="prevalence", y="category", ax=axes[0], color="#4C78A8")
-axes[0].set(title="4RA consensus artifact prevalence", xlabel="Positive fraction", ylabel="")
-axes[1].errorbar(
-    agreement_view["gwet_ac1_nominal"],
-    np.arange(len(agreement_view)),
-    xerr=np.vstack([
-        agreement_view["gwet_ac1_nominal"] - agreement_view["gwet_ac1_ci_low"],
-        agreement_view["gwet_ac1_ci_high"] - agreement_view["gwet_ac1_nominal"],
-    ]),
-    fmt="o", color="0.2", ecolor="0.55", capsize=3,
-)
-axes[1].set_yticks(np.arange(len(agreement_view)), agreement_view["category"])
-axes[1].set(title="Gwet AC1 with item-bootstrap 95% CI", xlabel="Agreement", xlim=(-.1, 1.05))
-fig.tight_layout()
-save_figure(fig, "05_goal4", "prevalence_and_agreement")
-plt.show()
+    fig, axes = plt.subplots(1, 2, figsize=(13, 5))
+    sns.barplot(data=prevalence, x="prevalence", y="category", ax=axes[0], color="#59A14F")
+    axes[0].set(title="Reliability-set 4RA consensus prevalence", xlabel="Positive fraction", ylabel="")
+    axes[1].errorbar(
+        agreement_view["gwet_ac1_nominal"],
+        np.arange(len(agreement_view)),
+        xerr=np.vstack([
+            agreement_view["gwet_ac1_nominal"] - agreement_view["gwet_ac1_ci_low"],
+            agreement_view["gwet_ac1_ci_high"] - agreement_view["gwet_ac1_nominal"],
+        ]),
+        fmt="o", color="0.2", ecolor="0.55", capsize=3,
+    )
+    axes[1].set_yticks(np.arange(len(agreement_view)), agreement_view["category"])
+    axes[1].set(title="Complete-item Gwet AC1, bootstrap 95% CI", xlabel="Agreement", xlim=(-.1, 1.05))
+    fig.tight_layout()
+    save_figure(fig, "05_goal4", "reliability_prevalence_and_agreement")
+    plt.show()
+else:
+    print("Reliability agreement is not estimable yet; inspect reliability_analysis_status.csv.")
 """
         ),
         code(
-            r"""# Primary cross-family matrix. Diagonal cells are matched perceptual families.
-four = read_stage("04_analysis/human_qc/four_ra_family_alignment_matrix")
-four_effect = four.pivot(index="human_family", columns="objective_family", values="effect")
-four_n = four.pivot(index="human_family", columns="objective_family", values="n_recordings")
-save_table(four, "05_goal4", "four_ra_family_alignment_matrix")
+            r"""# Primary broad-coverage estimand: weighted within-rater effects in the distributed set.
+main_alignment = read_stage("04_analysis/human_qc/main_distributed_rater_stratified_family_alignment")
+main_effect = main_alignment.pivot(index="human_family", columns="objective_family", values="effect")
+main_n = main_alignment.pivot(index="human_family", columns="objective_family", values="n_recordings")
+save_table(main_alignment, "05_goal4", "main_rater_stratified_family_alignment")
 
 fig, axes = plt.subplots(1, 2, figsize=(15, 6))
-sns.heatmap(four_effect, vmin=-1, vmax=1, center=0, cmap="vlag", annot=True, fmt=".2f", ax=axes[0])
-axes[0].set(title="4RA family alignment effect", xlabel="Objective Q family", ylabel="Perceptual family")
-sns.heatmap(four_n, cmap="viridis", annot=True, fmt=".0f", ax=axes[1])
+sns.heatmap(main_effect, vmin=-1, vmax=1, center=0, cmap="vlag", annot=True, fmt=".2f", ax=axes[0])
+axes[0].set(title="Main-set rater-stratified effect", xlabel="Objective Q family", ylabel="Perceptual family")
+sns.heatmap(main_n, cmap="viridis", annot=True, fmt=".0f", ax=axes[1])
 axes[1].set(title="Pair-specific recording denominator", xlabel="Objective Q family", ylabel="")
 fig.tight_layout()
-save_figure(fig, "05_goal4", "four_ra_alignment_and_denominators")
+save_figure(fig, "05_goal4", "main_rater_stratified_alignment_and_denominators")
 plt.show()
 
 matched_summary = (
-    four.loc[four["estimable"]]
+    main_alignment.loc[main_alignment["estimable"]]
     .groupby("matched_family")["effect"]
     .agg(["count", "mean", "median"]).reset_index()
 )
-save_table(matched_summary, "05_goal4", "matched_vs_mismatched_descriptive")
+save_table(matched_summary, "05_goal4", "main_matched_vs_mismatched_descriptive")
 display(matched_summary)
 
-specificity = read_stage("04_analysis/human_qc/four_ra_matched_family_specificity")
-save_table(specificity, "05_goal4", "four_ra_matched_family_specificity")
-display(specificity)
+# Higher-confidence sensitivity: crossed-set consensus, if class support permits.
+reliability_alignment = read_optional_stage("04_analysis/human_qc/reliability_four_ra_consensus_family_alignment")
+if not reliability_alignment.empty:
+    reliability_effect = reliability_alignment.pivot(index="human_family", columns="objective_family", values="effect")
+    fig, ax = plt.subplots(figsize=(9, 6))
+    sns.heatmap(reliability_effect, vmin=-1, vmax=1, center=0, cmap="vlag", annot=True, fmt=".2f", ax=ax)
+    ax.set(title="Reliability-subset 4RA consensus alignment", xlabel="Objective Q family", ylabel="Perceptual family")
+    save_figure(fig, "05_goal4", "reliability_consensus_alignment")
+    plt.show()
 """
         ),
         code(
-            r"""# The merged 2RA workflow is comparable only for families with explicit overlap.
-comparison = read_stage("04_analysis/human_qc/four_ra_vs_two_ra_paired_alignment")
-save_table(comparison, "05_goal4", "four_ra_vs_two_ra_paired_alignment")
+            r"""# The merged 2RA workflow is comparable only for explicit shared families.
+comparison = read_stage("04_analysis/human_qc/main_distributed_vs_two_ra_paired_alignment")
+reliability_comparison = read_optional_stage("04_analysis/human_qc/reliability_four_ra_consensus_vs_two_ra_paired_alignment")
+save_table(comparison, "05_goal4", "main_distributed_vs_two_ra_paired_alignment")
 display(comparison)
+if not reliability_comparison.empty:
+    save_table(reliability_comparison, "05_goal4", "reliability_consensus_vs_two_ra_paired_alignment")
+    display(reliability_comparison)
 
 if "delta_auc_a_minus_b" in comparison and comparison["delta_auc_a_minus_b"].notna().any():
     plot = comparison.loc[comparison["status"].eq("ok")].copy()
@@ -898,27 +1020,37 @@ if "delta_auc_a_minus_b" in comparison and comparison["delta_auc_a_minus_b"].not
     ax.axvline(0, color="0.35", linestyle="--")
     ax.set_yticks(np.arange(len(plot)), plot["family"])
     ax.set(
-        title="Paired shared-recording comparison",
-        xlabel="ΔAUC: 4RA detailed − merged 2RA broad",
+        title="Paired shared-recording comparison: main distributed vs 2RA",
+        xlabel="ΔAUC: distributed detailed − merged 2RA broad",
         ylabel="",
     )
-    save_figure(fig, "05_goal4", "four_ra_minus_two_ra_delta_auc")
+    save_figure(fig, "05_goal4", "main_distributed_minus_two_ra_delta_auc")
     plt.show()
 """
         ),
         code(
             r"""# Secondary duration/fraction analysis preserves the richer interval annotations.
-extent = read_stage("04_analysis/human_qc/four_ra_extent_consensus_secondary")
-context = read_stage("04_analysis/human_qc/context_annotations_not_family_alignment")
-save_table(extent, "05_goal4", "four_ra_extent_consensus_secondary")
+extent = read_stage("04_analysis/human_qc/main_distributed_extent_labels_secondary")
+context = read_stage("04_analysis/human_qc/main_context_annotations_not_family_alignment")
+reliability_extent = read_optional_stage("04_analysis/human_qc/reliability_four_ra_extent_consensus_secondary")
+save_table(extent, "05_goal4", "main_distributed_extent_labels_secondary")
 
 extent_summary = (
-    extent.groupby("category")["consensus_annotated_fraction"]
+    extent.groupby("category")["annotated_fraction"]
     .agg(n="count", median="median", q25=lambda x: x.quantile(.25), q75=lambda x: x.quantile(.75))
     .reset_index()
 )
-save_table(extent_summary, "05_goal4", "extent_consensus_summary")
+save_table(extent_summary, "05_goal4", "main_extent_summary")
 display(extent_summary)
+
+if not reliability_extent.empty:
+    reliability_extent_summary = (
+        reliability_extent.groupby("category")["consensus_annotated_fraction"]
+        .agg(n="count", median="median", q25=lambda x: x.quantile(.25), q75=lambda x: x.quantile(.75))
+        .reset_index()
+    )
+    save_table(reliability_extent_summary, "05_goal4", "reliability_extent_consensus_summary")
+    display(reliability_extent_summary)
 
 context_summary = (
     context.groupby("category")["rating"]
@@ -963,8 +1095,9 @@ display(registry)
     {"manuscript_role": "Goal 2 persistence", "source": "outputs/visualization/03_goal2/participant_rank_persistence.png", "status": "candidate"},
     {"manuscript_role": "Goal 3 structure", "source": "outputs/visualization/04_goal3/correlation_and_support_matrices.png", "status": "candidate"},
     {"manuscript_role": "Goal 3 Rest sensitivity", "source": "outputs/visualization/04_goal3/rest_reference_level_comparison.png", "status": "supplement candidate"},
-    {"manuscript_role": "Goal 4 family validity", "source": "outputs/visualization/05_goal4/four_ra_alignment_and_denominators.png", "status": "candidate"},
-    {"manuscript_role": "Goal 4 label-system comparison", "source": "outputs/visualization/05_goal4/four_ra_minus_two_ra_delta_auc.png", "status": "candidate if estimable"},
+    {"manuscript_role": "Goal 4 distributed family validity", "source": "outputs/visualization/05_goal4/main_rater_stratified_alignment_and_denominators.png", "status": "candidate"},
+    {"manuscript_role": "Goal 4 reliability-subset agreement", "source": "outputs/visualization/05_goal4/reliability_prevalence_and_agreement.png", "status": "candidate if estimable"},
+    {"manuscript_role": "Goal 4 label-system comparison", "source": "outputs/visualization/05_goal4/main_distributed_minus_two_ra_delta_auc.png", "status": "candidate if estimable"},
 ])
 save_table(figure_candidates, "06_registry", "manuscript_figure_candidates")
 display(figure_candidates)

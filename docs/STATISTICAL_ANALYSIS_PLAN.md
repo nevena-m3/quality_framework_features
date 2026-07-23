@@ -1,6 +1,6 @@
 # Statistical analysis plan
 
-Version: 0.3.0  
+Version: 0.4.0  
 Status: freeze before inspecting Q–clinical or Q–human associations
 
 ## 1. Analysis population and dependence
@@ -45,7 +45,9 @@ z(Q_{ij}) = \beta_0 + b_i + \epsilon_{ij}, \quad b_i\sim N(0,\sigma_b^2).
 
 The variance ratio \(\sigma_b^2/(\sigma_b^2+\sigma_e^2)\) is called **participant rank persistence**. It is not test–retest reliability because recordings differ in occasion, clinical state, device, environment, and potentially task implementation. Require at least 20 participants and 10 with repeated recordings. Skip measures with >80% zeros or inadequate unique values.
 
-The original three-goal manuscript grouped persistence with distributional characterization. Version 0.3.0 separates it as Goal 2 so the repeated-measures estimand, eligibility, and interpretation are explicit.
+The original three-goal manuscript grouped persistence with distributional
+characterization. The rebuilt plan separates it as Goal 2 so the repeated-measures
+estimand, eligibility, and interpretation are explicit.
 
 ## 5. Goal 3: multidimensional structure and reference robustness
 
@@ -78,17 +80,22 @@ percentile medians and remain secondary to the individual registered metrics.
 
 ### 6.1 Two distinct label systems
 
-Analyze the four-RA detailed interval annotations separately from broad metadata QC performed by two different RAs. Never pool them as if they were interchangeable. If only a final broad metadata label is available, report prevalence/association but do not claim its inter-rater agreement.
+Analyze three label sources separately: (1) the detailed distributed main annotations,
+with one independent RA per recording; (2) the crossed Reliability subset, with the same
+approximately 70 recordings independently rated by all four RAs; and (3) broad metadata
+QC performed by two different RAs. Never pool them as if they were interchangeable. If
+only a final broad metadata label is available, report prevalence/association but do not
+claim its inter-rater agreement.
 
-The supplied detailed CSV structure contains one annotation layer per file and no
-`rater_id`. Rater identity must therefore come from an explicit manifest or a validated
-one-folder-per-rater design. Never infer the rater from the recording filename. The
-primary detailed-label subset requires the expected four independent ratings for the
-same recording/family.
+The detailed CSV structure contains no `rater_id`. Rater identity therefore comes from
+the four predeclared RA directory names, never from the recording filename. The main
+distributed set supports rater-stratified family alignment but not inter-rater
+reliability or a four-RA consensus. Reliability and consensus are estimated only on
+complete same-recording/family items in the crossed `Reliability/<RA name>/` subset.
 
 ### 6.2 Rater reliability before consensus
 
-For each detailed category report:
+For each Reliability-subset category report:
 
 - number of items per rater and complete across all raters;
 - rating-level marginals and missingness by rater;
@@ -104,6 +111,15 @@ four-rater majority mode; a 2–2 tie remains missing and requires adjudication.
 consensus requires all four ratings. Three-of-four majority consensus is saved as a
 separate sensitivity analysis. The median annotated fraction/duration across four raters
 is a secondary extent label. The adjudication decision and blind status are recorded.
+
+For the distributed main set, report workload, prevalence, and positive/negative class
+support separately by RA. The primary alignment estimand is a
+positive-negative-pair-weighted mean of within-RA rank-biserial effects, with
+participant-cluster bootstrap confidence intervals. A pooled single-label analysis is
+secondary because rater and item allocation are not crossed in the main set.
+Even the within-RA estimator cannot separate RA effects from systematic differences in
+the files assigned to each RA; this remains a design limitation and is checked
+qualitatively against the crossed Reliability subset.
 
 ### 6.3 Family—not source—alignment
 
@@ -202,7 +218,9 @@ Required:
 6. confirmed diagnosis only versus reviewed ID-pattern controls;
 7. clinical alignment ±14 versus ±30 days;
 8. exact-session Bamboo–Rest pairs only—never nearest-date pairing as primary;
-9. broad merged 2RA metadata QC versus detailed four-RA QC, with paired shared-recording comparison only for overlapping families;
+9. broad merged 2RA metadata QC versus both the distributed main labels and crossed-set
+   four-RA consensus, using paired shared-recording comparisons only for overlapping
+   explicit families;
 10. four-of-four primary consensus versus three-of-four sensitivity consensus;
 11. binary presence versus median annotated-fraction extent labels, reported on their appropriate scales.
 

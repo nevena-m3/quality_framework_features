@@ -87,6 +87,49 @@ def test_interval_gui_parser_maps_perceptual_families_and_unions_overlap(tmp_pat
     assert not issues["issue"].eq("rater_identity_unresolved").any()
 
 
+def test_named_ra_directories_exclude_crossed_reliability_subfolder(tmp_path):
+    row = {
+        "file_name": "sample.wav",
+        "onset_seconds_absolute": 0.0,
+        "offset_seconds_absolute": 5.0,
+        "duration_seconds": 5.0,
+        "Environmental noise": json.dumps({"HVAC": []}),
+        "Any non-task related content": json.dumps({"Coughing": []}),
+        "Competing speech": json.dumps({"Other human speakers": []}),
+        "Volume unstable": json.dumps({"Volume changes": []}),
+        "Clipping": json.dumps({"Crackling on loud syllables": []}),
+        "Reverberation/echo": json.dumps({"Echo": [], "Reverb": []}),
+        "Platform effects": json.dumps({"Muffled": []}),
+        "Temporal discontinuities": json.dumps({"Audio glitching": []}),
+    }
+    for relative in [
+        ("Abbas", "main_segments.csv"),
+        ("Reliability", "Abbas", "reliability_segments.csv"),
+    ]:
+        folder = tmp_path.joinpath(*relative[:-1])
+        folder.mkdir(parents=True, exist_ok=True)
+        pd.DataFrame([row]).to_csv(folder / relative[-1], index=False)
+
+    main, _, _, issues = load_interval_human_qc(
+        tmp_path,
+        rater_strategy="parent_directory",
+        rater_directory_names=["Abbas", "Liya", "Samaana", "Samara"],
+        exclude_path_parts=["Reliability"],
+    )
+    reliability, _, _, reliability_issues = load_interval_human_qc(
+        tmp_path / "Reliability",
+        rater_strategy="parent_directory",
+        rater_directory_names=["Abbas", "Liya", "Samaana", "Samara"],
+    )
+
+    assert main["source_file"].nunique() == 1
+    assert reliability["source_file"].nunique() == 1
+    assert set(main["rater_id"]) == {"Abbas"}
+    assert set(reliability["rater_id"]) == {"Abbas"}
+    assert issues.empty
+    assert reliability_issues.empty
+
+
 def test_four_ra_coverage_and_primary_consensus_gate():
     ratings = pd.DataFrame(
         [

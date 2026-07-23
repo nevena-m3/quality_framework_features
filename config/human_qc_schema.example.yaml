@@ -1,16 +1,24 @@
 # Copy to config/human_qc_schema.yaml and review every mapping before Goal 4.
 #
-# The supplied CSV examples contain one annotation layer per recording and no rater_id.
-# The primary analysis therefore requires an explicit CSV manifest:
-#   relative_path,rater_id
-#   RA01/recording_segments.csv,RA01
-#   RA02/recording_segments.csv,RA02
+# Expected local layout:
+# Bamboo_passage_HumanQC/
+#   Abbas/   # distributed main ratings: different recordings per RA
+#   Liya/
+#   Samaana/
+#   Samara/
+#   Reliability/
+#     Abbas/ # the same approximately 70 recordings independently rated by all 4 RAs
+#     Liya/
+#     Samaana/
+#     Samara/
 #
-# If the local folder is already organized as one immediate subfolder per RA, change
-# rater_strategy to parent_directory and omit rater_manifest.
+# The main and Reliability folders are deliberately analyzed as different designs.
+# Never pool the main files as though every recording had four ratings.
 format: interval_json
-rater_strategy: manifest
-rater_manifest: config/human_qc_manifest.csv
+rating_design: distributed_with_crossed_reliability
+rater_strategy: parent_directory
+rater_directory_names: [Abbas, Liya, Samaana, Samara]
+reliability_subdirectory: Reliability
 expected_raters: 4
 minimum_primary_ratings: 4
 minimum_sensitivity_ratings: 3

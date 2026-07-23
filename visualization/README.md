@@ -32,18 +32,39 @@ first broad goal into two estimands so the repeated-recording design is not obsc
 2. participant persistence across repeated recordings (not test-retest reliability);
 3. multidimensional structure and robustness, including exact-session Rest and
    WAV/WEBM/segmentation sensitivities;
-4. perceptual family alignment using the detailed 4RA annotations and the separate
-   merged 2RA metadata labels.
+4. perceptual family alignment using (a) the distributed detailed annotations, (b) the
+   crossed four-RA reliability subset, and (c) the separate merged 2RA metadata labels.
 
 This is an analysis/reporting split, not permission to change hypotheses after inspecting
 results. Freeze the Statistical Analysis Plan and category/direction mappings first.
 
 ## Goal 4 gate
 
-The detailed GUI exports store interval JSON but no `rater_id`. Copy
-`config/human_qc_manifest.example.csv` to `config/human_qc_manifest.csv` and list every
-export with its independent RA. The primary consensus requires all four RAs. Three-of-four
-consensus is saved only as a sensitivity analysis.
+The schema expects the actual folder design:
+
+```text
+Bamboo_passage_HumanQC/
+  Abbas/
+  Liya/
+  Samaana/
+  Samara/
+  Reliability/
+    Abbas/
+    Liya/
+    Samaana/
+    Samara/
+```
+
+The four top-level RA folders contain the distributed main annotations: approximately
+170–173 different files per RA and one independent rating per recording. Their primary
+family-alignment effect is estimated within rater and then combined, so rater thresholds
+are not confused with Q alignment. Inter-rater agreement is not estimable from this
+distributed portion.
+
+The `Reliability` subfolders must contain the same approximately 70 recordings
+independently rated by all four RAs. Only complete four-rater recording/family items enter
+the primary Gwet AC1, Fleiss kappa, and consensus analysis. Incomplete items are reported
+and excluded; a three-of-four consensus is saved only as sensitivity output.
 
 The following are perceptual Q-family targets:
 

@@ -102,10 +102,24 @@ def _resolve_interval_rater(
     manifest: dict[str, str],
     *,
     strategy: str,
+    rater_directory_names: list[str] | None = None,
 ) -> tuple[str, str | None]:
     relative = source.relative_to(root).as_posix() if root.is_dir() else source.name
     if relative in manifest:
         return manifest[relative], None
+    if rater_directory_names and root.is_dir():
+        canonical = {name.casefold(): name for name in rater_directory_names}
+        matches = [
+            canonical[part.casefold()]
+            for part in source.relative_to(root).parts[:-1]
+            if part.casefold() in canonical
+        ]
+        if len(set(matches)) == 1:
+            # These directory names were explicitly declared in the frozen schema, so
+            # this is deterministic rater identification rather than heuristic inference.
+            return matches[0], None
+        if len(set(matches)) > 1:
+            return f"UNRESOLVED::{relative}", "multiple_rater_directories_in_path"
     if strategy == "parent_directory" and root.is_dir() and source.parent != root:
         return source.parent.name.strip(), "rater_inferred_from_parent_directory"
     # A segment filename is a recording identifier in the supplied exports. Treating its
@@ -122,6 +136,8 @@ def load_interval_human_qc(
     context_columns: dict[str, str] | None = None,
     interval_time_base: str = "absolute",
     boundary_tolerance_sec: float = 0.05,
+    exclude_path_parts: list[str] | None = None,
+    rater_directory_names: list[str] | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Parse the supplied segment-annotation JSON exports.
 
@@ -134,7 +150,12 @@ def load_interval_human_qc(
     from an explicit manifest or, when configured, from the immediate parent directory.
     """
     root = Path(path)
-    files = [root] if root.is_file() else sorted(root.rglob("*.csv"))
+    excluded = {part.casefold() for part in (exclude_path_parts or [])}
+    files = [root] if root.is_file() else sorted(
+        candidate
+        for candidate in root.rglob("*.csv")
+        if not any(part.casefold() in excluded for part in candidate.relative_to(root).parts)
+    )
     if not files:
         raise FileNotFoundError(f"No segment-annotation CSV files found under {root}")
     manifest = _read_rater_manifest(manifest_path)
@@ -149,13 +170,25 @@ def load_interval_human_qc(
     for source in files:
         relative = source.relative_to(root).as_posix() if root.is_dir() else source.name
         rater_id, rater_issue = _resolve_interval_rater(
-            source, root, manifest, strategy=rater_strategy
+            source,
+            root,
+            manifest,
+            strategy=rater_strategy,
+            rater_directory_names=rater_directory_names,
         )
         if rater_issue:
             issue_rows.append(
                 {
                     "source_file": relative,
-                    "severity": "error" if rater_issue == "rater_identity_unresolved" else "review",
+                    "severity": (
+                        "error"
+                        if rater_issue
+                        in {
+                            "rater_identity_unresolved",
+                            "multiple_rater_directories_in_path",
+                        }
+                        else "review"
+                    ),
                     "issue": rater_issue,
                     "rater_id": rater_id,
                 }
