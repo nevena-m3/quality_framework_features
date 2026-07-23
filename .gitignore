@@ -1,0 +1,36 @@
+# Local environment and secrets/configuration
+.venv/
+venv/
+config/project.yaml
+config/human_qc_schema.yaml
+config/human_qc_manifest.csv
+.env
+
+# Participant data and generated analyses must never be committed
+Data_13072026/
+data/
+outputs/
+*.wav
+*.webm
+*.mp3
+*.mp4
+*.flac
+*.m4a
+*.xlsx
+*.xls
+
+# Raw human-QC exports can contain participant filenames and local paths
+*_segments.csv
+
+# Python/Jupyter
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

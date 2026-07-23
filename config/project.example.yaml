@@ -1,0 +1,71 @@
+project:
+  name: paper1_remote_speech_qc
+  random_seed: 20260713
+  output_root: outputs
+
+paths:
+  # Single quotes are intentional: Windows backslashes remain literal in YAML.
+  data_root: 'C:\Users\musikicn\Desktop\Nevena_project\Data_13072026'
+  bamboo_audio: Bamboo_passage_only
+  rest_audio: Rest_only
+  combined_audio: Rest_Bamboo
+  detailed_human_qc: Bamboo_passage_HumanQC
+  bamboo_metadata: Bamboo.xlsx
+  rest_metadata: Rest.xlsx
+  combined_metadata: Rest_Bamboo.xlsx
+
+software:
+  ffmpeg: auto
+  ffprobe: auto
+  silero_backend: onnx
+  silero_version: 6.2.1
+
+cohort:
+  primary_task: Bamboo passage
+  media_preference: [".wav", ".webm", ".mp4"]
+  allowed_diagnoses: [ALS, CONTROLS]
+  # IDs matching these patterns may be flagged as "control inferred from ID".
+  # They are never promoted to confirmed diagnoses without review.
+  control_id_patterns: ['^CNEC\d+$', '^C\d+$', '^TCV\d+$']
+
+clinical_alignment:
+  primary_max_assessment_gap_days: 14
+  sensitivity_max_assessment_gap_days: 30
+  sentinel_values: [999, 9999, -999]
+
+vad:
+  sampling_rate_hz: 16000
+  threshold: 0.50
+  min_speech_ms: 250
+  min_silence_ms: 100
+  speech_pad_ms: 30
+  bridge_gap_ms: 100
+  strict_speech_edge_ms: 50
+  strict_nonspeech_edge_ms: 200
+  sensitivity_profiles:
+    conservative:
+      bridge_gap_ms: 50
+      strict_speech_edge_ms: 100
+      strict_nonspeech_edge_ms: 300
+    permissive:
+      bridge_gap_ms: 150
+      strict_speech_edge_ms: 25
+      strict_nonspeech_edge_ms: 100
+
+metrics:
+  frame_ms: 30
+  hop_ms: 10
+  min_speech_sec: 3.0
+  min_internal_nonspeech_sec: 0.5
+  pause_boundary_guard_ms: 200
+  reverb_min_offsets: 3
+  reverb_tail_window_ms: 500
+
+analysis:
+  bootstrap_replicates: 2000
+  alpha: 0.05
+  fdr_method: fdr_bh
+  minimum_complete_participants: 20
+  minimum_human_class_recordings: 5
+  minimum_human_class_participants: 5
+  one_recording_per_participant_seed: 20260713

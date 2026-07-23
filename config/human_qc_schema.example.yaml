@@ -1,0 +1,70 @@
+# Copy to config/human_qc_schema.yaml and review every mapping before Goal 4.
+#
+# The supplied CSV examples contain one annotation layer per recording and no rater_id.
+# The primary analysis therefore requires an explicit CSV manifest:
+#   relative_path,rater_id
+#   RA01/recording_segments.csv,RA01
+#   RA02/recording_segments.csv,RA02
+#
+# If the local folder is already organized as one immediate subfolder per RA, change
+# rater_strategy to parent_directory and omit rater_manifest.
+format: interval_json
+rater_strategy: manifest
+rater_manifest: config/human_qc_manifest.csv
+expected_raters: 4
+minimum_primary_ratings: 4
+minimum_sensitivity_ratings: 3
+interval_time_base: absolute
+
+# Perceptual family mapping. "Any non-task related content" and "Competing speech"
+# are retained for audit but excluded from primary family alignment.
+family_map:
+  Environmental noise: additive_interference
+  Volume unstable: gain_dynamics
+  Reverberation/echo: reverberation_tail
+  Platform effects: channel_device
+  Clipping: nonlinear_distortion
+  Temporal discontinuities: temporal_discontinuity
+
+context_columns:
+  Any non-task related content: task_content_contamination
+  Competing speech: competing_speech_context
+
+# Feature-level links are secondary. The primary Goal 4 estimand uses the
+# direction-oriented family indices constructed from the frozen metric registry.
+perceptual_metric_map:
+  additive_interference:
+    - qadd_nonspeech_level_dbfs
+    - qadd_snr_proxy_db
+    - qadd_nonspeech_variability_db
+    - qadd_hum_prominence_db
+    - qadd_transient_rate_per_min
+  gain_dynamics:
+    - qgain_level_iqr_db
+    - qgain_segment_sd_db
+    - qgain_abs_drift_db_per_min
+  reverberation_tail:
+    - qrev_tail_excess_db
+    - qrev_decay_time_proxy_sec
+  channel_device:
+    - qchan_effective_bandwidth_hz
+  nonlinear_distortion:
+    - qdist_hard_clip_sample_fraction
+    - qdist_clip_event_rate_per_min
+    - qdist_clipped_frame_fraction
+  temporal_discontinuity:
+    - qtemp_zero_dropout_fraction
+    - qtemp_zero_dropout_rate_per_min
+    - qtemp_duplicate_window_rate_per_min
+
+# These are merged metadata fields produced by a different two-RA workflow.
+# The individual two-RA decisions are not available in the metadata, so their
+# inter-rater reliability cannot be estimated. Only overlapping families can be
+# compared fairly with the detailed 4RA system.
+broad_metadata:
+  direction_confirmed: false
+  absent_value: No
+  present_value: Yes
+  family_columns:
+    additive_interference: Background Noise
+    gain_dynamics: Volume is Unstable

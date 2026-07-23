@@ -1,3 +1,31 @@
+Metadata-Version: 2.4
+Name: paper1-remote-speech-qc
+Version: 0.3.0
+Summary: Auditable quality-control measurement pipeline for remote ALS speech recordings
+Requires-Python: <3.13,>=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: numpy<3,>=1.26
+Requires-Dist: pandas<3,>=2.2
+Requires-Dist: scipy<2,>=1.12
+Requires-Dist: statsmodels<0.15,>=0.14
+Requires-Dist: soundfile<0.14,>=0.12
+Requires-Dist: PyYAML<7,>=6.0
+Requires-Dist: openpyxl<4,>=3.1
+Requires-Dist: pyarrow<23,>=15
+Requires-Dist: matplotlib<4,>=3.8
+Requires-Dist: seaborn<0.14,>=0.13
+Requires-Dist: tqdm<5,>=4.66
+Requires-Dist: silero-vad==6.2.1
+Requires-Dist: onnxruntime<2,>=1.18
+Provides-Extra: dev
+Requires-Dist: pytest<9,>=8; extra == "dev"
+Requires-Dist: ruff<1,>=0.5; extra == "dev"
+Requires-Dist: jupyterlab<5,>=4; extra == "dev"
+Requires-Dist: nbclient<0.11,>=0.10; extra == "dev"
+Provides-Extra: reverb
+Requires-Dist: torchmetrics<2,>=1.4; extra == "reverb"
+Requires-Dist: gammatone<2,>=1.0; extra == "reverb"
+
 # Paper 1: quality control for remote speech biomarkers
 
 This is a clean rebuild of the original Paper 1 pipeline. It keeps the familiar notebook sequence while moving every reusable algorithm into a tested Python package. The pipeline is a **measurement and validation study**, not an ALS diagnostic model.
