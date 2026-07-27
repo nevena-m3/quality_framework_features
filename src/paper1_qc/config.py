@@ -21,11 +21,21 @@ def load_config(path: str | Path) -> dict[str, Any]:
     output_root = Path(cfg["project"].get("output_root", "outputs"))
     if not output_root.is_absolute():
         output_root = config_path.parent.parent / output_root
+    main_output_root = Path(cfg["project"].get("main_output_root", "MAIN outputs"))
+    if not main_output_root.is_absolute():
+        main_output_root = config_path.parent.parent / main_output_root
 
     cfg["_config_path"] = str(config_path)
+    cfg["_project_root"] = str(config_path.parent.parent.resolve())
     cfg["_data_root"] = str(data_root)
     cfg["_output_root"] = str(output_root.resolve())
+    cfg["_main_output_root"] = str(main_output_root.resolve())
     return cfg
+
+
+def resolve_project_path(cfg: dict[str, Any], value: str | Path) -> Path:
+    path = Path(value).expanduser()
+    return path if path.is_absolute() else Path(cfg["_project_root"]) / path
 
 
 def resolve_data_path(cfg: dict[str, Any], key: str) -> Path:
@@ -46,4 +56,3 @@ def resolve_executable(value: str, default_name: str) -> str:
 def stable_hash(payload: Any) -> str:
     encoded = json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
-

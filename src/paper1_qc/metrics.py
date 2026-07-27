@@ -10,6 +10,7 @@ from .segmentation import Interval
 
 
 EPS = 1e-12
+PSD_TINY = np.finfo(np.float64).tiny
 
 
 def dbfs_rms(values: np.ndarray) -> float:
@@ -34,6 +35,16 @@ def _interval_slices(
 
 def _total_duration(intervals: Iterable[Interval]) -> float:
     return float(sum(item.duration_sec for item in intervals))
+
+
+def _eligible_interval_support(
+    intervals: Iterable[Interval], *, minimum_clip_sec: float
+) -> tuple[list[Interval], float]:
+    """Return intervals that meet a continuous-duration requirement and their exposure."""
+    eligible = [
+        item for item in intervals if item.duration_sec + EPS >= minimum_clip_sec
+    ]
+    return eligible, _total_duration(eligible)
 
 
 def _frame_levels(
@@ -100,6 +111,27 @@ def _mean_interval_psd(
     return common_freqs, np.average(np.vstack(psds), axis=0, weights=np.asarray(weights))
 
 
+def _spectral_flatness_ratio(psd: np.ndarray) -> float:
+    """Return a gain-invariant geometric/arithmetic PSD ratio."""
+    power = np.asarray(psd, dtype=np.float64)
+    if power.size == 0 or not np.isfinite(power).all():
+        return np.nan
+    mean_power = float(np.mean(power))
+    if mean_power <= PSD_TINY:
+        return np.nan
+    safe_power = np.maximum(power, PSD_TINY)
+    return float(np.exp(np.mean(np.log(safe_power))) / mean_power)
+
+
+def _power_ratio_db(numerator: float, denominator: float) -> float:
+    """Return a gain-invariant power ratio in dB, or NaN for a silent reference."""
+    if not np.isfinite(numerator) or not np.isfinite(denominator):
+        return np.nan
+    if denominator <= PSD_TINY:
+        return np.nan
+    return float(10 * np.log10(max(numerator, PSD_TINY) / denominator))
+
+
 def additive_interference_metrics(
     waveform: np.ndarray,
     sample_rate: int,
@@ -110,59 +142,151 @@ def additive_interference_metrics(
     speech_sec = _total_duration(strict_speech)
     nonspeech_sec = _total_duration(strict_internal_nonspeech)
     _, speech_levels, _ = _frame_levels(waveform, sample_rate, strict_speech)
-    _, noise_levels, _ = _frame_levels(waveform, sample_rate, strict_internal_nonspeech)
+    _, noise_levels, noise_segment_ids = _frame_levels(
+        waveform, sample_rate, strict_internal_nonspeech
+    )
+    flatness_intervals, flatness_support_sec = _eligible_interval_support(
+        strict_internal_nonspeech, minimum_clip_sec=0.25
+    )
+    hum_intervals, hum_support_sec = _eligible_interval_support(
+        strict_internal_nonspeech, minimum_clip_sec=1.0
+    )
+    nonspeech_durations = [
+        item.duration_sec for item in strict_internal_nonspeech
+    ]
     result: dict[str, float | str] = {
-        "qadd_status": "ok",
+        "qadd_status": "insufficient_support",
         "qadd_speech_support_sec": speech_sec,
         "qadd_nonspeech_support_sec": nonspeech_sec,
+        "qadd_speech_frame_count": int(len(speech_levels)),
+        "qadd_nonspeech_frame_count": int(len(noise_levels)),
+        "qadd_nonspeech_interval_count": int(len(strict_internal_nonspeech)),
+        "qadd_max_nonspeech_interval_sec": (
+            float(max(nonspeech_durations)) if nonspeech_durations else 0.0
+        ),
+        "qadd_flatness_spectral_support_sec": flatness_support_sec,
+        "qadd_hum_spectral_support_sec": hum_support_sec,
         "qadd_nonspeech_level_dbfs": np.nan,
+        "qadd_nonspeech_level_dbfs_status": "insufficient_nonspeech_support",
         "qadd_snr_proxy_db": np.nan,
+        "qadd_snr_proxy_db_status": "insufficient_nonspeech_support",
         "qadd_nonspeech_variability_db": np.nan,
+        "qadd_nonspeech_variability_db_status": "insufficient_nonspeech_support",
         "qadd_hum_prominence_db": np.nan,
+        "qadd_hum_prominence_db_status": "insufficient_contiguous_spectral_support",
         "qadd_transient_rate_per_min": np.nan,
+        "qadd_transient_rate_per_min_status": "insufficient_nonspeech_support",
         "qadd_spectral_flatness": np.nan,
+        "qadd_spectral_flatness_status": "insufficient_spectral_support",
     }
-    if speech_sec < 3 or nonspeech_sec < 0.5 or len(noise_levels) < 20:
-        result["qadd_status"] = "insufficient_support"
-        return result
 
-    result["qadd_nonspeech_level_dbfs"] = float(np.median(noise_levels))
-    result["qadd_nonspeech_variability_db"] = float(np.subtract(*np.percentile(noise_levels, [75, 25])))
-    result["qadd_snr_proxy_db"] = float(np.median(speech_levels) - np.median(noise_levels))
+    nonspeech_support_ok = nonspeech_sec >= 0.5 and len(noise_levels) >= 20
+    if nonspeech_support_ok:
+        result["qadd_nonspeech_level_dbfs"] = float(np.median(noise_levels))
+        result["qadd_nonspeech_level_dbfs_status"] = "ok"
+        result["qadd_nonspeech_variability_db"] = float(
+            np.subtract(*np.percentile(noise_levels, [75, 25]))
+        )
+        result["qadd_nonspeech_variability_db_status"] = "ok"
 
-    median = float(np.median(noise_levels))
-    mad = float(np.median(np.abs(noise_levels - median)))
-    transient = noise_levels >= median + max(12.0, 6 * 1.4826 * mad)
-    result["qadd_transient_rate_per_min"] = float(len(_count_runs(transient)) / nonspeech_sec * 60)
+        median = float(np.median(noise_levels))
+        mad = float(np.median(np.abs(noise_levels - median)))
+        transient = noise_levels >= median + max(12.0, 6 * 1.4826 * mad)
+        transient_events = sum(
+            len(_count_runs(transient[noise_segment_ids == segment_id]))
+            for segment_id in np.unique(noise_segment_ids)
+        )
+        result["qadd_transient_rate_per_min"] = float(
+            transient_events / nonspeech_sec * 60
+        )
+        result["qadd_transient_rate_per_min_status"] = "ok"
+    elif nonspeech_sec >= 0.5:
+        frame_status = "insufficient_nonspeech_frames"
+        result["qadd_nonspeech_level_dbfs_status"] = frame_status
+        result["qadd_nonspeech_variability_db_status"] = frame_status
+        result["qadd_transient_rate_per_min_status"] = frame_status
 
-    freqs, psd = _mean_interval_psd(waveform, sample_rate, strict_internal_nonspeech)
-    if freqs is None:
-        return result
-    valid = (freqs >= 20) & (freqs <= min(1000, sample_rate / 2))
-    result["qadd_spectral_flatness"] = float(
-        np.exp(np.mean(np.log(psd[valid] + EPS))) / (np.mean(psd[valid]) + EPS)
-    )
+    speech_support_ok = speech_sec >= 3.0 and len(speech_levels) >= 100
+    if nonspeech_support_ok and speech_support_ok:
+        result["qadd_snr_proxy_db"] = float(
+            np.median(speech_levels) - np.median(noise_levels)
+        )
+        result["qadd_snr_proxy_db_status"] = "ok"
+    elif nonspeech_support_ok:
+        result["qadd_snr_proxy_db_status"] = (
+            "insufficient_speech_duration"
+            if speech_sec < 3.0
+            else "insufficient_speech_frames"
+        )
 
-    candidate_prominence = []
-    for fundamental in (50.0, 60.0):
-        harmonic_db = []
-        for harmonic in range(1, 5):
-            center = fundamental * harmonic
-            if center + 12 >= sample_rate / 2:
-                continue
-            tone = (freqs >= center - 1.0) & (freqs <= center + 1.0)
-            reference = (
-                ((freqs >= center - 12) & (freqs <= center - 4))
-                | ((freqs >= center + 4) & (freqs <= center + 12))
-            )
-            if tone.any() and reference.any():
-                harmonic_db.append(
-                    10 * np.log10((np.mean(psd[tone]) + EPS) / (np.median(psd[reference]) + EPS))
-                )
-        if harmonic_db:
-            candidate_prominence.append(float(np.mean(harmonic_db)))
-    if candidate_prominence:
-        result["qadd_hum_prominence_db"] = float(max(candidate_prominence))
+    if flatness_support_sec >= 1.0:
+        freqs, psd = _mean_interval_psd(
+            waveform,
+            sample_rate,
+            flatness_intervals,
+            minimum_clip_sec=0.25,
+        )
+        if freqs is not None:
+            valid = (freqs >= 20) & (freqs <= min(1000, sample_rate / 2))
+            if valid.any():
+                flatness = _spectral_flatness_ratio(psd[valid])
+                if np.isfinite(flatness):
+                    result["qadd_spectral_flatness"] = flatness
+                    result["qadd_spectral_flatness_status"] = "ok"
+                else:
+                    result["qadd_spectral_flatness_status"] = "silent_spectral_support"
+            else:
+                result["qadd_spectral_flatness_status"] = "unsupported_frequency_range"
+        else:
+            result["qadd_spectral_flatness_status"] = "spectral_computation_failed"
+
+    if hum_support_sec >= 1.0:
+        freqs, psd = _mean_interval_psd(
+            waveform,
+            sample_rate,
+            hum_intervals,
+            minimum_clip_sec=1.0,
+        )
+        candidate_prominence = []
+        if freqs is not None:
+            for fundamental in (50.0, 60.0):
+                harmonic_db = []
+                for harmonic in range(1, 5):
+                    center = fundamental * harmonic
+                    if center + 12 >= sample_rate / 2:
+                        continue
+                    tone = (freqs >= center - 1.0) & (freqs <= center + 1.0)
+                    reference = (
+                        ((freqs >= center - 12) & (freqs <= center - 4))
+                        | ((freqs >= center + 4) & (freqs <= center + 12))
+                    )
+                    if tone.any() and reference.any():
+                        prominence = _power_ratio_db(
+                            float(np.mean(psd[tone])),
+                            float(np.median(psd[reference])),
+                        )
+                        if np.isfinite(prominence):
+                            harmonic_db.append(prominence)
+                if harmonic_db:
+                    candidate_prominence.append(float(np.mean(harmonic_db)))
+        if candidate_prominence:
+            result["qadd_hum_prominence_db"] = float(max(candidate_prominence))
+            result["qadd_hum_prominence_db_status"] = "ok"
+        else:
+            result["qadd_hum_prominence_db_status"] = "spectral_computation_failed"
+
+    primary_status_fields = [
+        "qadd_nonspeech_level_dbfs_status",
+        "qadd_snr_proxy_db_status",
+        "qadd_nonspeech_variability_db_status",
+        "qadd_hum_prominence_db_status",
+        "qadd_transient_rate_per_min_status",
+    ]
+    primary_ok = sum(result[field] == "ok" for field in primary_status_fields)
+    if primary_ok == len(primary_status_fields):
+        result["qadd_status"] = "ok"
+    elif primary_ok:
+        result["qadd_status"] = "partial_support"
     return result
 
 
@@ -199,9 +323,9 @@ def rest_reference_metrics(waveform: np.ndarray, sample_rate: int) -> dict[str, 
     if freqs is None:
         return result
     valid = (freqs >= 20) & (freqs <= min(1000, sample_rate / 2))
-    result["restref_spectral_flatness"] = float(
-        np.exp(np.mean(np.log(psd[valid] + EPS))) / (np.mean(psd[valid]) + EPS)
-    )
+    flatness = _spectral_flatness_ratio(psd[valid])
+    if np.isfinite(flatness):
+        result["restref_spectral_flatness"] = flatness
     prominence = []
     for fundamental in (50.0, 60.0):
         values = []
@@ -213,9 +337,12 @@ def rest_reference_metrics(waveform: np.ndarray, sample_rate: int) -> dict[str, 
                 | ((freqs >= center + 4) & (freqs <= center + 12))
             )
             if tone.any() and reference.any():
-                values.append(
-                    10 * np.log10((np.mean(psd[tone]) + EPS) / (np.median(psd[reference]) + EPS))
+                candidate = _power_ratio_db(
+                    float(np.mean(psd[tone])),
+                    float(np.median(psd[reference])),
                 )
+                if np.isfinite(candidate):
+                    values.append(candidate)
         if values:
             prominence.append(float(np.mean(values)))
     if prominence:

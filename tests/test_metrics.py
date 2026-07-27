@@ -63,6 +63,115 @@ def test_hum_prominence_increases_for_60hz_tone():
     assert hum_result["qadd_hum_prominence_db"] > baseline_result["qadd_hum_prominence_db"] + 10
 
 
+def test_additive_pause_metrics_do_not_require_three_seconds_of_speech():
+    rng = np.random.default_rng(41)
+    waveform = rng.normal(0, 0.002, 5 * SR)
+    result = additive_interference_metrics(
+        waveform,
+        SR,
+        strict_speech=[Interval(0.0, 2.0)],
+        strict_internal_nonspeech=[Interval(2.5, 3.5)],
+    )
+    assert result["qadd_status"] == "partial_support"
+    assert result["qadd_nonspeech_level_dbfs_status"] == "ok"
+    assert np.isfinite(result["qadd_nonspeech_level_dbfs"])
+    assert result["qadd_nonspeech_variability_db_status"] == "ok"
+    assert np.isfinite(result["qadd_nonspeech_variability_db"])
+    assert result["qadd_transient_rate_per_min_status"] == "ok"
+    assert np.isfinite(result["qadd_transient_rate_per_min"])
+    assert result["qadd_snr_proxy_db_status"] == "insufficient_speech_duration"
+    assert np.isnan(result["qadd_snr_proxy_db"])
+
+
+def test_additive_spectral_status_matches_continuous_pause_support():
+    rng = np.random.default_rng(42)
+    waveform = rng.normal(0, 0.002, 6 * SR)
+    result = additive_interference_metrics(
+        waveform,
+        SR,
+        strict_speech=[Interval(0.0, 3.5)],
+        strict_internal_nonspeech=[
+            Interval(4.0, 4.2),
+            Interval(4.5, 4.7),
+            Interval(5.0, 5.2),
+        ],
+    )
+    assert result["qadd_status"] == "partial_support"
+    assert result["qadd_nonspeech_level_dbfs_status"] == "ok"
+    assert result["qadd_spectral_flatness_status"] == "insufficient_spectral_support"
+    assert result["qadd_hum_prominence_db_status"] == (
+        "insufficient_contiguous_spectral_support"
+    )
+    assert np.isnan(result["qadd_spectral_flatness"])
+    assert np.isnan(result["qadd_hum_prominence_db"])
+
+
+def test_additive_transients_are_counted_separately_across_pauses():
+    rng = np.random.default_rng(43)
+    waveform = rng.normal(0, 0.001, 5 * SR)
+    pauses = [Interval(1.0, 1.5), Interval(3.0, 3.5)]
+    waveform[int(1.43 * SR) : int(1.50 * SR)] += rng.normal(
+        0, 0.02, int(0.07 * SR)
+    )
+    waveform[int(3.00 * SR) : int(3.07 * SR)] += rng.normal(
+        0, 0.02, int(0.07 * SR)
+    )
+    result = additive_interference_metrics(
+        waveform,
+        SR,
+        strict_speech=[
+            Interval(0.0, 1.0),
+            Interval(1.5, 3.0),
+            Interval(3.5, 5.0),
+        ],
+        strict_internal_nonspeech=pauses,
+    )
+    # Two events over one second of supported nonspeech = 120 events/min.
+    assert result["qadd_transient_rate_per_min"] == 120.0
+
+
+def test_additive_relative_metrics_are_invariant_to_global_gain():
+    rng = np.random.default_rng(44)
+    waveform = rng.normal(0, 0.002, 6 * SR)
+    time = np.arange(len(waveform)) / SR
+    speech = [Interval(0.0, 3.5), Interval(4.8, 6.0)]
+    pause = [Interval(3.5, 4.8)]
+    speech_mask = np.zeros(len(waveform), dtype=bool)
+    for interval in speech:
+        speech_mask[
+            int(interval.start_sec * SR) : int(interval.end_sec * SR)
+        ] = True
+    waveform[speech_mask] += 0.05 * np.sin(
+        2 * np.pi * 180 * time[speech_mask]
+    )
+    low = additive_interference_metrics(
+        waveform * 0.5,
+        SR,
+        strict_speech=speech,
+        strict_internal_nonspeech=pause,
+    )
+    high = additive_interference_metrics(
+        waveform * 2.0,
+        SR,
+        strict_speech=speech,
+        strict_internal_nonspeech=pause,
+    )
+    assert np.isclose(
+        high["qadd_nonspeech_level_dbfs"]
+        - low["qadd_nonspeech_level_dbfs"],
+        20 * np.log10(4),
+        atol=1e-8,
+    )
+    for feature in [
+        "qadd_snr_proxy_db",
+        "qadd_nonspeech_variability_db",
+        "qadd_hum_prominence_db",
+        "qadd_transient_rate_per_min",
+        "qadd_spectral_flatness",
+    ]:
+        assert np.isclose(high[feature], low[feature], atol=1e-8)
+
+
 def test_gain_drift_reports_db_per_minute():
     time = np.arange(20 * SR) / SR
     # A 20-dB amplitude rise over 20 seconds corresponds to about 60 dB/min.

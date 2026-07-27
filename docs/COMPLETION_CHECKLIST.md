@@ -11,7 +11,8 @@
 
 ## Decisions requiring investigator sign-off
 
-- which encoding is original when both WAV and WEBM exist;
+- confirm the frozen primary-selection policy: uniquely decodable WAV first, with
+  WAV/WEBM treated as technical replicates in sensitivity analysis;
 - whether `Task Completed as Instructed = No` is always a hard task-comparability exclusion;
 - exact meaning/direction of `Needs Parsing` and why `Background Noise = Yes` occurs in ~90% of canonical Bamboo recordings;
 - whether the supplied control-ID patterns are sufficient after manual review;
@@ -25,6 +26,12 @@
 - [ ] zero unresolved metadata errors in the frozen primary cohort;
 - [ ] 100% disk inventory reconciliation or documented disposition;
 - [ ] zero silent decode/segmentation/feature failures;
+- [ ] every automatically flagged/excluded recording and accepted segmentation-only
+  outlier reviewed with audio/plot evidence and reviewer/date provenance;
+- [ ] every manual speech-boundary override previewed, reason documented, and validated
+  as ordered/non-overlapping/within-duration;
+- [ ] frozen decisions and frozen intervals exist, and every KEEP recording has positive
+  frozen primary-speech support;
 - [ ] stratified waveform/spectrogram review across metric quantiles and statuses;
 - [ ] synthetic monotonicity tests expanded to every primary metric;
 - [ ] paired WAV/WEBM agreement report;

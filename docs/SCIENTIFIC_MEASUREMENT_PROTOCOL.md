@@ -1,6 +1,6 @@
 # Scientific measurement protocol
 
-Version: 0.4.0  
+Version: 0.10.0  
 Status: implementation-complete; empirical execution pending local audio and annotations
 
 ## 1. Scope and claims
@@ -63,7 +63,12 @@ Checks precede any analysis:
 
 Clinical primary analyses require a non-sentinel ALSFRS score with assessment date within ±14 days of the recording. ±30 days is sensitivity only. Scores are session-specific; participant-level carry-forward is prohibited.
 
-Identifier patterns supplied by the data manager can create `diagnosis_inferred_from_id`, but `diagnosis_analysis` remains missing until reviewed. An inferred label never overwrites the reported field.
+Identifier patterns supplied by the data manager first create
+`diagnosis_inferred_from_id`. They are promoted to `diagnosis_analysis` only in the
+versioned freeze when the configuration records that the rule was reviewed and gives its
+evidence source. Nonmatching missing diagnoses require an explicit `ALS`, `CONTROLS`, or
+`EXCLUDE` adjudication. The source `Diagnosis` and `diagnosis_reported` fields are never
+overwritten.
 
 ## 5. Audio views
 
@@ -79,24 +84,136 @@ The distinction is mandatory: resampling before QC can smooth clipping plateaus,
 
 ## 6. Segmentation measurement model
 
-Silero VAD is installed as version 6.2.1 and loaded from the installed package, not from an unpinned `torch.hub` branch. Raw timestamps are saved. Primary post-processing bridges gaps ≤100 ms and removes speech islands <250 ms.
+Silero VAD is installed as version 6.2.1 and loaded from the installed package, not
+from an unpinned `torch.hub` branch. The primary candidate rule is the package default:
+16-kHz mono input, threshold 0.5, 250-ms minimum speech, and 100-ms minimum silence.
+The model is loaded once and reset by the official timestamp function between
+recordings.
+
+The scientifically timed output differs from the original display implementation in
+two deliberate ways. First, primary Silero regions use `speech_pad_ms=0`; padding
+expands a region by a requested amount and is not evidence for an acoustic onset or
+offset. Second, there is no second 100-ms bridge or 250-ms filter after Silero has
+already applied its duration rules. The primary table therefore retains the returned
+sample indices (62.5-µs resolution at 16 kHz), subject only to clipping/normalization at
+recording limits. This removes the systematic 50-ms expansion and avoids double
+post-processing of pauses.
+
+The familiar visible artifact layer remains: non-overlapping 30-ms diagnostic frames,
+one frame CSV and one segment CSV per recording, and the original four-panel
+waveform/RMS/mask/segment plot. Segment roles are `leading_nonspeech`,
+`internal_nonspeech`, `trailing_nonspeech`, and `speech`; the plotted rows are labelled
+`non-speech` and `speech`. The displayed mask can differ from an exact boundary by up
+to one 30-ms bin. It is not the timing source used by the frozen interval table.
+
+The legacy-named frame columns `speech_vad_raw`, `speech_vad_smooth`, and
+`speech_mask_strict` intentionally remain identical because this is the original
+artifact contract. They are diagnostic compatibility aliases and are not treated as
+three sensitivity definitions.
 
 Four distinct interval views are saved:
 
-- `raw_speech`: direct version-pinned model output;
-- `primary_speech`: bridged/filtered output;
+- `raw_speech`: direct unpadded, sample-indexed version-pinned model output;
+- `primary_speech`: normalized direct output with no second bridge/filter pass;
 - `strict_speech`: primary speech eroded by 50 ms at each edge;
 - `strict_internal_nonspeech`: only pauses between speech regions, eroded by 200 ms away from both speech boundaries.
 
 The nonspeech guard reduces speech leakage and reverberant-tail contamination. It does not turn pauses into guaranteed noise-only calibration intervals. Breathing, coughs, room sounds, and another speaker remain possible.
 
-Two pre-specified sensitivity profiles alter only post-processing guards:
+The original-style plot is accompanied by a boundary-audit table and figure. For each
+exact onset/offset, a 120-ms local window separated from the boundary by a 20-ms guard
+quantifies inside-versus-outside RMS contrast and the difference between the exact
+sample edge and its 30-ms displayed representation. Contrast below 3 dB is a review
+flag only. It never snaps or trims a boundary automatically because weak, breathy, or
+gradually decaying ALS speech can have genuinely low energy contrast.
 
-| Profile | Bridge | Speech-edge erosion | Nonspeech-edge erosion |
-|---|---:|---:|---:|
-| Primary | 100 ms | 50 ms | 200 ms |
-| Conservative | 50 ms | 100 ms | 300 ms |
-| Permissive | 150 ms | 25 ms | 100 ms |
+Two pre-specified sensitivity profiles rerun Silero rather than merely relabeling the
+same timestamps. All profiles remain unpadded and have no second bridge/filter pass:
+
+| Profile | Threshold | Minimum speech | Minimum silence | Speech-edge guard | Nonspeech-edge guard |
+|---|---:|---:|---:|---:|---:|
+| Primary | 0.50 | 250 ms | 100 ms | 50 ms | 200 ms |
+| Conservative | 0.65 | 250 ms | 100 ms | 100 ms | 300 ms |
+| Permissive | 0.35 | 100 ms | 200 ms | 25 ms | 100 ms |
+
+These values are pre-specified operating points, not a claim of universally optimal
+ALS boundaries. VAD performance is known to differ for dysarthric speech and by task.
+Any manuscript claim about boundary accuracy therefore requires an independent,
+diagnosis-blind manual boundary reference subset, participant-disjoint parameter
+selection/validation, and reporting of onset error, offset error, speech overlap, false
+speech duration, and missed-speech duration separately for ALS and controls. Parameter
+changes made after viewing clinical or human-quality associations require a new
+segmentation version.
+
+### 6.1 Mandatory review selection
+
+One prespecified task-validity rule is applied before segmentation adjudication:
+an exact normalized frozen-metadata value
+`Task Completed as Instructed = NO` is a locked automatic exclusion. This rule concerns
+whether Bamboo was performed, not perceived acoustic quality. Missing values are not
+silently interpreted as `NO`.
+
+Among task-valid recordings, mandatory review selection is based only on segmentation
+diagnostics. Diagnosis, clinical scores, Q metrics, and perceptual quality-family labels
+are not used by the selection rule or displayed as review fields. This is not claimed as
+fully blinded because the required recording filename/subject identifier can sometimes
+reveal or suggest cohort membership.
+Every automatically flagged or excluded recording is mandatory. An accepted recording
+is also mandatory if it crosses a prespecified near-threshold guardrail or has an
+extreme robust value among accepted recordings.
+
+For each prespecified segmentation summary \(x\), the transparent robust score is
+
+\[
+z_i^* = 0.67448975\frac{x_i-\operatorname{median}(x)}
+{\operatorname{median}(|x-\operatorname{median}(x)|)}.
+\]
+
+The accepted-reference set must contain at least 20 nonmissing recordings and have
+nonzero median absolute deviation. The review threshold is
+\(|z_i^*|\ge 4.5\). The features are duration, speech fraction, counts of speech/internal
+nonspeech segments, leading/trailing nonspeech duration, longest internal pause,
+frame-RMS median/SD, and boundary-contrast summaries. Additional accepted guardrails
+are speech fraction <0.10, at least 20 speech segments, longest internal pause ≥4 s,
+local low-contrast boundary fraction ≥0.50, or duration <2 s. These rules prompt review;
+they never automatically exclude a recording.
+
+### 6.2 Review and manual-boundary policy
+
+The reviewer can scroll/search across every recording and sees the original four-panel
+plot, exact-edge boundary audit, segmentation quantities, review reason, and an audio
+player. Exactly three human adjudication states are allowed:
+
+- `KEEP + AUTO`: retain the automatic primary Silero boundaries;
+- `KEEP + MANUAL`: replace primary speech boundaries with documented manual intervals;
+- `EXCLUDE + NONE`: exclude the recording with a documented reason.
+
+Manual speech intervals must be finite, ordered, non-overlapping, within recording
+duration, and accompanied by reviewer/date/reason provenance. Manual edits correct
+speech onset/offset errors only. They must not remove background noise, clipping,
+reverberation, gain changes, or other quality phenomena that Paper 1 is intended to
+measure. A manually corrected primary view is eroded using the same 50-ms strict-speech
+and 200-ms internal-nonspeech guards. Its raw/primary compatibility views both represent
+the investigator-adjudicated speech support and are explicitly marked
+`manual_override`.
+
+Manual correction replaces only the primary profile. Conservative and permissive
+profiles retain the original automatic Silero results, preserving a valid segmentation
+sensitivity analysis.
+
+### 6.3 Segmentation freeze
+
+`segment-adjudicate` validates the complete review sheet and manual interval ledger,
+then atomically writes a versioned immutable directory under
+`MAIN outputs/01_SEGMENTATION_FREEZE/<version>` containing
+`frozen_segmentation_decisions` and `frozen_segmentation_intervals`.
+Every kept recording must contain positive-duration frozen primary speech. Feature
+extraction reads only the frozen interval table; the unfrozen automatic table cannot be
+used by the extraction command. Manual-review frame/segment CSVs, diagnostic PNG, and
+exact-edge boundary audit are saved for every manually corrected recording. A separate
+immutable publication tree, `outputs/01_segmentation_after_review`, materializes every
+final frame/segment/figure and boundary audit under accepted, flagged, or excluded.
+Accepted and flagged are analysis-eligible; excluded is audit-only.
 
 ## 7. Q-metric principles
 
@@ -111,7 +228,26 @@ The machine-readable registry is `src/paper1_qc/registry.py`. It defines role, u
 - exposure-normalized high-energy nonspeech transient rate;
 - spectral flatness as a secondary noise-type descriptor, not a monotonic severity score.
 
-At least 3 s of strict speech, 0.5 s of guarded internal nonspeech, and 20 nonspeech frames are required. The SNR proxy is explicitly not a calibrated acoustic SNR.
+Support is metric-specific rather than an all-or-none family gate:
+
+- nonspeech level, variability, and transient rate require at least 0.5 s of total
+  guarded internal nonspeech and 20 complete nonspeech frames;
+- the SNR proxy additionally requires at least 3 s and 100 complete frames of strict
+  speech;
+- spectral flatness requires at least 1 s total from pauses that are each at least
+  250 ms;
+- narrowband hum prominence requires at least 1 s from pauses that are each at least
+  1 s, preventing zero-padding of short pauses from being mistaken for genuine frequency
+  resolution.
+
+Every metric has its own status field. An `ok` status must correspond to one finite
+value, and a non-`ok` status must correspond to a missing value. The family status is
+`ok` only when all five primary measures are available, `partial_support` when at least
+one primary measure is available, and `insufficient_support` otherwise. Transient runs
+are counted within each pause so events cannot merge across discontinuous intervals.
+Relative spectral ratios use a machine-level numerical floor rather than a fixed
+power offset, preserving global-gain invariance. The SNR proxy is explicitly not a
+calibrated acoustic SNR.
 
 ### Gain and amplitude dynamics
 

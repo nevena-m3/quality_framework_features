@@ -3,6 +3,7 @@ pyproject.toml
 src/paper1_qc/__init__.py
 src/paper1_qc/cli.py
 src/paper1_qc/config.py
+src/paper1_qc/freeze.py
 src/paper1_qc/human_qc.py
 src/paper1_qc/media.py
 src/paper1_qc/metadata.py
@@ -10,6 +11,7 @@ src/paper1_qc/metrics.py
 src/paper1_qc/provenance.py
 src/paper1_qc/registry.py
 src/paper1_qc/segmentation.py
+src/paper1_qc/segmentation_review.py
 src/paper1_qc/statistics.py
 src/paper1_remote_speech_qc.egg-info/PKG-INFO
 src/paper1_remote_speech_qc.egg-info/SOURCES.txt
@@ -18,8 +20,10 @@ src/paper1_remote_speech_qc.egg-info/entry_points.txt
 src/paper1_remote_speech_qc.egg-info/requires.txt
 src/paper1_remote_speech_qc.egg-info/top_level.txt
 tests/test_family_alignment.py
+tests/test_freeze.py
 tests/test_human_qc.py
 tests/test_media.py
 tests/test_metadata.py
 tests/test_metrics.py
 tests/test_segmentation.py
+tests/test_segmentation_freeze_cli.py

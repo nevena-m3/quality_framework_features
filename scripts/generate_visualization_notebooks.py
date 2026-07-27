@@ -39,7 +39,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from IPython.display import display
+from IPython.display import Image, Markdown, display
 
 def find_project_root():
     for candidate in [Path.cwd(), *Path.cwd().parents]:
@@ -50,6 +50,7 @@ def find_project_root():
 ROOT = find_project_root()
 CONFIG = ROOT / "config" / "project.yaml"
 OUTPUT = ROOT / "outputs"
+MAIN_OUTPUTS = ROOT / "MAIN outputs"
 VIZ_ROOT = OUTPUT / "visualization"
 sys.path.insert(0, str(ROOT / "src"))
 
@@ -87,7 +88,7 @@ def run_cli(*arguments):
     subprocess.run(command, cwd=ROOT, check=True)
 
 def save_table(frame, folder, name):
-    target = VIZ_ROOT / folder
+    target = VIZ_ROOT / folder / "tables"
     target.mkdir(parents=True, exist_ok=True)
     path = target / f"{name}.csv"
     frame.to_csv(path, index=False)
@@ -95,7 +96,7 @@ def save_table(frame, folder, name):
     return path
 
 def save_figure(fig, folder, name):
-    target = VIZ_ROOT / folder
+    target = VIZ_ROOT / folder / "figures"
     target.mkdir(parents=True, exist_ok=True)
     png = target / f"{name}.png"
     svg = target / f"{name}.svg"
@@ -104,9 +105,20 @@ def save_figure(fig, folder, name):
     print("FIGURE:", png.relative_to(ROOT))
     return png, svg
 
+def stage_gate(stage_name, can_continue, reasons, next_step):
+    status = "PASS — safe to continue" if can_continue else "BLOCKED — decision/action required"
+    color = "#1B7F3A" if can_continue else "#B22222"
+    details = "\n".join(f"- {reason}" for reason in reasons) if reasons else "- No blocking findings."
+    display(Markdown(
+        f"### {stage_name}: <span style='color:{color}'>{status}</span>\n\n"
+        f"{details}\n\n**Next step:** {next_step}"
+    ))
+    return can_continue
+
 assert CONFIG.exists(), "Copy config/project.example.yaml to config/project.yaml and review it."
 print("Project:", ROOT)
 print("Config:", CONFIG)
+print("MAIN outputs:", MAIN_OUTPUTS)
 print("Visualization outputs:", VIZ_ROOT)
 """
 
@@ -117,14 +129,19 @@ def notebook(title: str, purpose: str, cells: list[dict]) -> dict:
             md(
                 f"# {title}\n\n{purpose}\n\n"
                 "Every displayed denominator and paper-facing visual is also saved under "
-                "`outputs/visualization/`. Empty or under-supported analyses remain visible "
-                "as audit rows; they are never silently removed."
+                "separate `figures/` and `tables/` folders within `outputs/visualization/`. "
+                "Empty or under-supported analyses remain visible as audit rows; they are "
+                "never silently removed. The final cell explains whether the next stage is allowed."
             ),
             code(BOOTSTRAP),
             *cells,
         ],
         "metadata": {
-            "kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"},
+            "kernelspec": {
+                "display_name": "Paper 1 QC",
+                "language": "python",
+                "name": "paper1-qc",
+            },
             "language_info": {"name": "python", "version": "3.11"},
         },
         "nbformat": 4,
@@ -145,7 +162,8 @@ write(
     [
         md(
             "Set `RUN_PIPELINE_STAGES=True` only after `config/project.yaml` points to the "
-            "updated data root. The audit is intentionally run before any signal processing."
+            "updated data root. Audit and inventory run before the immutable data freeze. "
+            "The template step never overwrites an existing adjudication file."
         ),
         code(
             r"""RUN_PIPELINE_STAGES = False
@@ -153,8 +171,23 @@ write(
 if RUN_PIPELINE_STAGES:
     run_cli("audit")
     run_cli("inventory")
+    run_cli("freeze-template")
 else:
-    print("Dry review only. Set RUN_PIPELINE_STAGES=True to run audit and inventory.")
+    print("Dry review only. Set RUN_PIPELINE_STAGES=True to run audit, inventory, and freeze-template.")
+"""
+        ),
+        md(
+            "Open `config/metadata_adjudication.csv`; enter `ALS`, `CONTROLS`, or "
+            "`EXCLUDE` and an evidence source for every row. Then set `RUN_DATA_FREEZE=True` "
+            "once. A completed version cannot be overwritten."
+        ),
+        code(
+            r"""RUN_DATA_FREEZE = False
+
+if RUN_DATA_FREEZE:
+    run_cli("freeze")
+else:
+    print("Freeze not requested in this run.")
 """
         ),
         code(
@@ -167,7 +200,7 @@ display(audit_summary)
 display(cross_workbook)
 
 issue_counts = (
-    metadata_issues.groupby(["severity", "issue"], dropna=False)
+    metadata_issues.groupby(["severity", "rule"], dropna=False)
     .size().rename("n").reset_index().sort_values(["severity", "n"], ascending=[True, False])
 )
 save_table(issue_counts, "00_preflight", "metadata_issue_counts")
@@ -176,8 +209,8 @@ display(issue_counts)
 media_summary = pd.DataFrame({
     "recordings_on_disk": [inventory["file_name"].nunique()],
     "physical_files": [len(inventory)],
-    "extensions": [", ".join(sorted(inventory["extension"].dropna().astype(str).unique())) if "extension" in inventory else "not available"],
-    "probe_failures": [int(inventory.get("probe_status", pd.Series(dtype=str)).astype(str).ne("ok").sum()) if "probe_status" in inventory else np.nan],
+    "extensions": [", ".join(sorted(inventory["file_name"].map(lambda value: Path(str(value)).suffix.lower()).unique()))],
+    "probe_failures": [int((~inventory["probe_ok"].fillna(False)).sum()) if "probe_ok" in inventory else np.nan],
 })
 save_table(media_summary, "00_preflight", "media_inventory_summary")
 display(media_summary)
@@ -270,6 +303,31 @@ if len(blocking):
     display(blocking.head(50))
 """
         ),
+        code(
+            r"""# Stage decision: the immutable freeze, not the raw audit count, controls continuation.
+freeze_version = str(project_cfg.get("data_freeze", {}).get("version", "v1"))
+freeze_root = MAIN_OUTPUTS / "00_DATA_FREEZE" / freeze_version
+freeze_manifest = freeze_root / "data_freeze_manifest.json"
+confirmed_exceptional = project_cfg.get("data_freeze", {}).get(
+    "confirmed_control_subject_ids", []
+)
+exceptional_evidence = project_cfg.get("data_freeze", {}).get(
+    "confirmed_control_subject_evidence", ""
+)
+preflight_reasons = []
+if confirmed_exceptional and not str(exceptional_evidence).strip():
+    preflight_reasons.append("Exceptional control IDs are listed without evidence.")
+if not freeze_manifest.exists():
+    preflight_reasons.append(
+        f"Immutable freeze is missing: {freeze_manifest.relative_to(ROOT)}"
+    )
+preflight_ready = stage_gate(
+    "Preflight and data freeze",
+    not preflight_reasons,
+    preflight_reasons,
+    "Open 01_segmentation_visual_audit.ipynb only after this gate passes.",
+)"""
+        ),
     ],
 )
 
@@ -277,12 +335,16 @@ if len(blocking):
 write(
     "01_segmentation_visual_audit.ipynb",
     "01 — Segmentation visual audit",
-    "Runs Silero segmentation, quantifies profile sensitivity, and overlays saved intervals on decoded waveforms.",
+    "Runs Silero segmentation and audits the exact original per-recording frame, segment, and four-panel figure artifacts.",
     [
         md(
-            "This notebook does not decide that unusual ALS speech is invalid. It visualizes "
-            "raw, primary, strict-speech, and guarded-nonspeech views and keeps flags separate "
-            "from hard exclusions."
+            "The visible Silero artifacts in this notebook reproduce the original pipeline: "
+            "one 30-ms frame CSV, one segment CSV, and one four-panel PNG per recording. "
+            "All of them now live inside `outputs/01_segmentation`. The aggregate "
+            "raw/primary/strict-speech/guarded-nonspeech interval table retains unpadded "
+            "sample-index boundaries; the 30-ms artifact layer is visualization only. "
+            "A separate boundary-audit CSV/PNG quantifies display binning and local edge evidence. "
+            "Unusual ALS speech is not invalid merely because it is fragmented by VAD."
         ),
         code(
             r"""RUN_SEGMENTATION = False
@@ -359,72 +421,252 @@ display(recording.describe(include="all").T)
 """
         ),
         code(
-            r"""fig, axes = plt.subplots(1, 3, figsize=(15, 4), sharey=True)
-for ax, view in zip(axes, ["raw_speech", "primary_speech", "strict_speech"]):
-    sns.ecdfplot(
-        data=recording,
-        x=f"fraction__{view}",
-        hue="profile",
-        ax=ax,
-    )
-    ax.set(title=view.replace("_", " ").title(), xlabel="Fraction of recording", ylabel="ECDF")
-fig.suptitle("Segmentation support across pre-specified profiles", y=1.04)
-save_figure(fig, "01_segmentation", "speech_fraction_ecdf")
-plt.show()
+            r"""LEGACY = OUTPUT / "01_segmentation" / "segmentation" / "silero"
+LEGACY_FIGURES = OUTPUT / "01_segmentation" / "figures" / "segmentation" / "silero"
+legacy_summary = pd.read_csv(LEGACY / "summary" / "silero_all_summary.csv")
 
-fig, ax = plt.subplots(figsize=(9, 5))
-primary_counts = recording.loc[recording["profile"].eq("primary")].copy()
-count_column = "n_intervals__primary_speech"
-sns.histplot(primary_counts[count_column], bins=30, ax=ax)
-ax.set(title="Primary speech fragmentation audit", xlabel="Number of primary speech intervals")
-save_figure(fig, "01_segmentation", "primary_speech_fragmentation")
-plt.show()
+artifact_audit = pd.DataFrame([{
+    "summary_rows": len(legacy_summary),
+    "segment_csv_files": len(list((LEGACY / "segments").glob("*_segments.csv"))),
+    "frame_csv_files": len(list((LEGACY / "frames").glob("*_frames.csv"))),
+    "accepted_png_files": len(list((LEGACY_FIGURES / "accepted").glob("*_silero.png"))),
+    "flagged_png_files": len(list((LEGACY_FIGURES / "flagged").glob("*_silero.png"))),
+    "excluded_png_files": len(list((LEGACY_FIGURES / "excluded").glob("*_silero.png"))),
+    "boundary_audit_csv_files": len(list((LEGACY / "boundary_audit").glob("*_boundary_audit.csv"))),
+    "boundary_audit_png_files": len(list((LEGACY_FIGURES / "boundary_audit").glob("*_boundary_audit.png"))),
+}])
+artifact_audit["total_png_files"] = artifact_audit[
+    ["accepted_png_files", "flagged_png_files", "excluded_png_files"]
+].sum(axis=1)
+artifact_audit["one_segment_file_per_summary_row"] = (
+    artifact_audit["segment_csv_files"] == artifact_audit["summary_rows"]
+)
+artifact_audit["one_frame_file_per_summary_row"] = (
+    artifact_audit["frame_csv_files"] == artifact_audit["summary_rows"]
+)
+artifact_audit["one_figure_per_summary_row"] = (
+    artifact_audit["total_png_files"] == artifact_audit["summary_rows"]
+)
+artifact_audit["one_boundary_audit_csv_per_summary_row"] = (
+    artifact_audit["boundary_audit_csv_files"] == artifact_audit["summary_rows"]
+)
+artifact_audit["one_boundary_audit_png_per_summary_row"] = (
+    artifact_audit["boundary_audit_png_files"] == artifact_audit["summary_rows"]
+)
+save_table(artifact_audit, "01_segmentation", "legacy_artifact_completeness")
+display(artifact_audit)
+assert artifact_audit[[
+    "one_segment_file_per_summary_row",
+    "one_frame_file_per_summary_row",
+    "one_figure_per_summary_row",
+    "one_boundary_audit_csv_per_summary_row",
+    "one_boundary_audit_png_per_summary_row",
+]].all(axis=None), "Silero per-recording artifact contract is incomplete"
 """
         ),
         code(
-            r"""# Waveform overlay for a deliberately editable example.
-from paper1_qc.config import load_config, resolve_executable
-from paper1_qc.media import decode_audio_views
+            r"""# Inspect the exact original-format per-recording CSVs and PNG.
+EXAMPLE_FILE = None  # replace with an exact filename, or leave None for the first row
+candidate = EXAMPLE_FILE or legacy_summary["file_name"].dropna().iloc[0]
+candidate_row = legacy_summary.loc[legacy_summary["file_name"].eq(candidate)].iloc[0]
+candidate_stem = Path(candidate).stem
+candidate_frames = pd.read_csv(LEGACY / "frames" / f"{candidate_stem}_frames.csv")
+candidate_segments = pd.read_csv(LEGACY / "segments" / f"{candidate_stem}_segments.csv")
+
+expected_frame_columns = [
+    "frame_idx", "mid_sec", "rms", "rms_db", "speech_vad_raw",
+    "speech_vad_smooth", "speech_mask_strict", "nonspeech_mask_strict",
+    "threshold", "frame_ms",
+]
+expected_segment_columns = [
+    "segment_type", "start_sec", "end_sec", "duration_sec",
+    "run_start_frame", "run_end_frame", "segment_role",
+]
+assert candidate_frames.columns.tolist() == expected_frame_columns
+assert candidate_segments.columns.tolist() == expected_segment_columns
+assert set(candidate_segments["segment_role"]).issubset({
+    "speech", "leading_nonspeech", "internal_nonspeech", "trailing_nonspeech"
+})
+
+display(Markdown(f"### Original-format artifact audit: `{candidate}`"))
+display(candidate_segments)
+display(candidate_frames.head(20))
+display(Image(filename=str(candidate_row["plot_path"]), width=1100))
+"""
+        ),
+        code(
+            r"""# Exact-boundary audit: review evidence only; no energy-based auto-snapping.
+resolved_parameters = json.loads(
+    (OUTPUT / "01_segmentation" / "logs" / "silero_segmentation_config.json")
+    .read_text(encoding="utf-8")
+)
+display(pd.DataFrame([resolved_parameters]).T.rename(columns={0: "resolved_value"}))
+
+boundary_summary = read_stage("01_segmentation/bamboo_segmentation_summary")[[
+    "file_name", "qc_status", "boundary_edges", "boundary_low_contrast_edges",
+    "boundary_low_contrast_fraction", "boundary_min_contrast_db",
+    "boundary_audit_path", "boundary_plot_path",
+]]
+save_table(boundary_summary, "01_segmentation", "boundary_alignment_summary")
+display(boundary_summary.sort_values(
+    ["boundary_low_contrast_fraction", "boundary_min_contrast_db"],
+    ascending=[False, True],
+).head(40))
+
+BOUNDARY_EXAMPLE_FILE = None
+if BOUNDARY_EXAMPLE_FILE:
+    boundary_row = boundary_summary.loc[
+        boundary_summary["file_name"].eq(BOUNDARY_EXAMPLE_FILE)
+    ].iloc[0]
+else:
+    boundary_row = boundary_summary.sort_values(
+        ["boundary_low_contrast_fraction", "boundary_min_contrast_db"],
+        ascending=[False, True],
+    ).iloc[0]
+display(pd.read_csv(boundary_row["boundary_audit_path"]))
+display(Image(filename=str(boundary_row["boundary_plot_path"]), width=1100))
+"""
+        ),
+        code(
+            r"""# Preserve the original pipeline's accepted/flagged/excluded visual audit.
+qc_summary = read_stage("01_segmentation/bamboo_segmentation_summary")
+qc_counts = (
+    qc_summary["qc_status"].value_counts(dropna=False)
+    .rename_axis("qc_status").reset_index(name="logical_recordings")
+)
+qc_counts["percent"] = 100 * qc_counts["logical_recordings"] / max(1, len(qc_summary))
+save_table(qc_summary, "01_segmentation", "recording_level_silero_qc")
+save_table(qc_counts, "01_segmentation", "accepted_flagged_excluded_counts")
+display(qc_counts)
+
+for status in ["accepted", "flagged", "excluded"]:
+    subset = qc_summary.loc[qc_summary["qc_status"].eq(status)]
+    if subset.empty:
+        print(f"No {status} recording exists.")
+        continue
+    example_path = Path(str(subset.iloc[0]["plot_path"]))
+    display(Markdown(f"**{status.upper()} example:** `{subset.iloc[0]['file_name']}`"))
+    if example_path.exists():
+        display(Image(filename=str(example_path), width=1000))
+    else:
+        print("Diagnostic path is missing:", example_path)
+"""
+        ),
+        md(
+            "## Required segmentation decision\n\n"
+            "Non-outlying accepted recordings default to `KEEP + AUTO`. Every flagged/excluded "
+            "recording and every accepted segmentation-only outlier requires review. The widget "
+            "shows all recordings in a scrollable/searchable browser and supports audio playback, "
+            "the original four-panel plot, one-click `KEEP + AUTO`, "
+            "`KEEP + MANUAL`, and `EXCLUDE + NONE`. Do not exclude unusual ALS speech merely "
+            "because VAD fragmented it, and do not edit boundaries to remove acoustic noise. "
+            "`Task Completed as Instructed = NO` is a locked automatic exclusion."
+        ),
+        code(
+            r"""run_cli("segment-template")
+import yaml
+
+project_cfg = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
+adjudication_path = ROOT / project_cfg.get("data_freeze", {}).get(
+    "segmentation_adjudication", "config/segmentation_adjudication.csv"
+)
+manual_override_path = ROOT / project_cfg.get("data_freeze", {}).get(
+    "manual_segmentation_overrides", "config/manual_segmentation_overrides.csv"
+)
+review = pd.read_csv(adjudication_path, keep_default_na=False)
+from paper1_qc.segmentation import segmentation_pending_reviews
+
+pending_review = segmentation_pending_reviews(review)
+save_table(pending_review, "01_segmentation", "pending_segmentation_decisions")
+display(pending_review[[
+    "file_name", "automatic_qc_status", "task_completed_as_instructed",
+    "automatic_task_exclusion", "accepted_outlier", "review_reasons",
+    "decision", "boundary_source", "reviewer", "review_date", "notes"
+]])
+
+selection_summary = (
+    review.groupby(
+        [
+            "automatic_qc_status", "automatic_task_exclusion",
+            "accepted_outlier", "review_required",
+        ],
+        dropna=False,
+    ).size().rename("logical_recordings").reset_index()
+)
+save_table(selection_summary, "01_segmentation", "review_selection_summary")
+display(selection_summary)
+"""
+        ),
+        code(
+            r"""from paper1_qc.config import load_config, resolve_executable
+from paper1_qc.segmentation_review import launch_segmentation_review_widget
 
 cfg = load_config(CONFIG)
-inventory = read_stage("00_audit/bamboo_media_inventory")
-EXAMPLE_FILE = None  # replace with an exact filename, or leave None for the first resolvable file
-candidate = EXAMPLE_FILE or segments["file_name"].dropna().iloc[0]
-paths = inventory.loc[inventory["file_name"].eq(candidate), "file_path"].tolist()
-assert len(paths) == 1, f"Expected one disk path for {candidate}; found {len(paths)}"
-audio = decode_audio_views(
-    paths[0],
+DEFAULT_REVIEWER = ""  # enter your name once
+review_widget = launch_segmentation_review_widget(
+    summary=qc_summary,
+    automatic_intervals=segments,
+    review_path=adjudication_path,
+    overrides_path=manual_override_path,
+    default_reviewer=DEFAULT_REVIEWER,
     ffmpeg=resolve_executable(cfg["software"]["ffmpeg"], "ffmpeg"),
     ffprobe=resolve_executable(cfg["software"]["ffprobe"], "ffprobe"),
 )
-wave = audio.analysis_16k
-time = np.arange(len(wave)) / 16000
-
-example_intervals = segments.loc[
-    segments["file_name"].eq(candidate) & segments["profile"].eq("primary")
-].copy()
-palette = {
-    "raw_speech": "#4C78A8",
-    "primary_speech": "#59A14F",
-    "strict_speech": "#F28E2B",
-    "strict_internal_nonspeech": "#E15759",
-}
-fig, ax = plt.subplots(figsize=(16, 5))
-ax.plot(time, wave, color="0.25", linewidth=0.45, alpha=0.8)
-for view, rows in example_intervals.groupby("view"):
-    for first, interval in enumerate(rows.itertuples()):
-        ax.axvspan(
-            interval.start_sec,
-            interval.end_sec,
-            color=palette.get(view, "0.7"),
-            alpha=0.14,
-            label=view if first == 0 else None,
-        )
-ax.set(title=f"Waveform and segmentation views: {candidate}", xlabel="Time (s)", ylabel="Amplitude")
-ax.legend(ncol=2, frameon=False)
-save_figure(fig, "01_segmentation", "example_waveform_interval_overlay")
-plt.show()
+display(review_widget)
 """
+        ),
+        code(
+            r"""# Run after the interactive review; the widget writes decisions to disk.
+review = pd.read_csv(adjudication_path, keep_default_na=False)
+pending_review = segmentation_pending_reviews(review)
+display(pending_review[[
+    "file_name", "automatic_qc_status", "task_completed_as_instructed",
+    "review_reasons", "decision", "boundary_source", "reviewer",
+    "review_date", "notes"
+]])
+
+RUN_SEGMENTATION_ADJUDICATION = False
+if RUN_SEGMENTATION_ADJUDICATION:
+    assert pending_review.empty, "Complete every required review before freezing."
+    run_cli("segment-adjudicate")
+else:
+    print("Set RUN_SEGMENTATION_ADJUDICATION=True only after pending_review is empty.")
+"""
+        ),
+        code(
+            r"""segmentation_freeze_version = project_cfg.get("segmentation_freeze", {}).get(
+    "version",
+    project_cfg.get("data_freeze", {}).get("version", "v1"),
+)
+SEGMENTATION_FREEZE = (
+    MAIN_OUTPUTS / "01_SEGMENTATION_FREEZE" / str(segmentation_freeze_version)
+)
+frozen_decision_path = SEGMENTATION_FREEZE / "frozen_segmentation_decisions.csv"
+frozen_interval_path = SEGMENTATION_FREEZE / "frozen_segmentation_intervals.csv"
+reviewed_summary_path = (
+    OUTPUT / "01_segmentation_after_review" / "segmentation" / "silero"
+    / "summary" / "silero_after_review_summary.csv"
+)
+decision_exists = frozen_decision_path.exists()
+interval_exists = frozen_interval_path.exists()
+reviewed_exists = reviewed_summary_path.exists()
+segmentation_reasons = []
+if not pending_review.empty:
+    segmentation_reasons.append(
+        f"{len(pending_review)} required/incomplete segmentation reviews remain."
+    )
+if not decision_exists:
+    segmentation_reasons.append("Frozen segmentation decision table does not exist.")
+if not interval_exists:
+    segmentation_reasons.append("Frozen segmentation interval table does not exist.")
+if not reviewed_exists:
+    segmentation_reasons.append("Post-review segmentation summary does not exist.")
+segmentation_ready = stage_gate(
+    "Silero segmentation",
+    not segmentation_reasons,
+    segmentation_reasons,
+    "Open 02_goal1_occurrence_and_acquisition_variability.ipynb only after this gate passes.",
+)"""
         ),
     ],
 )
@@ -457,7 +699,7 @@ save_table(flow, "02_goal1", "eligibility_flow_counts")
 
 eligible = data.loc[data["primary_measurement_eligible"].fillna(False)].copy()
 cohort = (
-    eligible.groupby("diagnosis_reported", dropna=False)
+    eligible.groupby("diagnosis_analysis", dropna=False)
     .agg(recordings=("logical_recording_id", "nunique"), participants=("SubjectID", "nunique"))
     .reset_index()
 )
@@ -499,8 +741,8 @@ plt.show()
         code(
             r"""# Family-faceted raw-unit distributions. No cross-unit composite is plotted.
 metric_columns = [feature for feature in registry["feature"] if feature in eligible]
-long = eligible[["file_name", "SubjectID", "diagnosis_reported", *metric_columns]].melt(
-    id_vars=["file_name", "SubjectID", "diagnosis_reported"],
+long = eligible[["file_name", "SubjectID", "diagnosis_analysis", *metric_columns]].melt(
+    id_vars=["file_name", "SubjectID", "diagnosis_analysis"],
     var_name="feature",
     value_name="value",
 )
@@ -516,7 +758,7 @@ for family, family_frame in long.groupby("family", sort=True):
         sns.histplot(
             data=plot_data,
             x="value",
-            hue="diagnosis_reported",
+            hue="diagnosis_analysis",
             element="step",
             stat="density",
             common_norm=False,
@@ -578,6 +820,24 @@ ax.set(title="Exploratory participant-level ALS vs control contrasts", xlabel="C
 save_figure(fig, "02_goal1", "diagnosis_cliffs_delta_forest")
 plt.show()
 """
+        ),
+        code(
+            r"""feature_errors = read_optional_stage("02_features/feature_extraction_errors")
+goal1_reasons = []
+if eligible.empty:
+    goal1_reasons.append("No recordings satisfy primary measurement eligibility.")
+if support.empty:
+    goal1_reasons.append("Metric support table is empty.")
+if not feature_errors.empty:
+    goal1_reasons.append(
+        f"{len(feature_errors)} feature-extraction errors require correction or documented exclusion."
+    )
+goal1_ready = stage_gate(
+    "Goal 1 occurrence/acquisition variability",
+    not goal1_reasons,
+    goal1_reasons,
+    "Open 03_goal2_participant_persistence.ipynb only after this gate passes.",
+)"""
         ),
     ],
 )
@@ -695,6 +955,19 @@ variance_table = persistence[[
 save_table(variance_table, "03_goal2", "participant_persistence_full")
 display(variance_table)
 """
+        ),
+        code(
+            r"""goal2_reasons = []
+if repeat_counts["recordings"].ge(2).sum() == 0:
+    goal2_reasons.append("No participant has at least two eligible recordings.")
+if estimable.empty:
+    goal2_reasons.append("No persistence metric is estimable.")
+goal2_ready = stage_gate(
+    "Goal 2 participant persistence",
+    not goal2_reasons,
+    goal2_reasons,
+    "Open 04_goal3_multidimensional_structure_and_robustness.ipynb after this gate passes.",
+)"""
         ),
     ],
 )
@@ -847,6 +1120,23 @@ if len(complete):
     plt.show()
 """
         ),
+        code(
+            r"""goal3_reasons = []
+if pairwise.empty:
+    goal3_reasons.append("Pairwise metric-structure table is empty.")
+if segmentation_robustness.empty:
+    goal3_reasons.append("Segmentation-profile sensitivity is missing.")
+if encoding.empty:
+    goal3_reasons.append("Paired WAV/WEBM sensitivity is missing.")
+if rest_summary["exact_session_pairs"].iloc[0] == 0:
+    goal3_reasons.append("No exact-session Bamboo–Rest pair is available.")
+goal3_ready = stage_gate(
+    "Goal 3 structure and robustness",
+    not goal3_reasons,
+    goal3_reasons,
+    "Open 05_goal4_perceptual_family_alignment.ipynb after this gate passes.",
+)"""
+        ),
     ],
 )
 
@@ -885,7 +1175,6 @@ consensus = read_optional_stage("04_analysis/human_qc/reliability_four_ra_consen
 direction_audit = read_stage("04_analysis/human_qc/two_ra_broad_direction_and_scale_audit")
 
 display(direction_audit)
-assert direction_audit["direction"].eq("higher_is_worse").all()
 save_table(direction_audit, "05_goal4", "direction_and_scale_audit")
 save_table(main_design, "05_goal4", "main_distributed_design_summary")
 save_table(main_workload, "05_goal4", "main_rater_workload_and_prevalence")
@@ -1062,6 +1351,25 @@ save_table(context_summary, "05_goal4", "context_annotations_excluded_from_famil
 display(context_summary)
 """
         ),
+        code(
+            r"""goal4_reasons = []
+if direction_audit.empty or not direction_audit["direction"].eq("higher_is_worse").all():
+    goal4_reasons.append(
+        "The 2RA scale direction is not confirmed as higher-is-worse; verify the codebook."
+    )
+if main_alignment.empty:
+    goal4_reasons.append("Distributed detailed-rating family alignment is missing.")
+if agreement.empty:
+    goal4_reasons.append(
+        "Complete four-RA crossed reliability agreement is missing or not estimable."
+    )
+goal4_ready = stage_gate(
+    "Goal 4 perceptual family alignment",
+    not goal4_reasons,
+    goal4_reasons,
+    "Open 06_results_registry_and_manuscript_tables.ipynb only after this gate passes.",
+)"""
+        ),
     ],
 )
 
@@ -1089,19 +1397,36 @@ display(registry)
         ),
         code(
             r"""figure_candidates = pd.DataFrame([
-    {"manuscript_role": "Segmentation supplement", "source": "outputs/visualization/01_segmentation/speech_fraction_ecdf.png", "status": "candidate"},
-    {"manuscript_role": "Goal 1 support panel", "source": "outputs/visualization/02_goal1/metric_support_fraction.png", "status": "candidate"},
-    {"manuscript_role": "Goal 1 acquisition distributions", "source": "outputs/visualization/02_goal1/raw_distributions__<family>.png", "status": "family facets"},
-    {"manuscript_role": "Goal 2 persistence", "source": "outputs/visualization/03_goal2/participant_rank_persistence.png", "status": "candidate"},
-    {"manuscript_role": "Goal 3 structure", "source": "outputs/visualization/04_goal3/correlation_and_support_matrices.png", "status": "candidate"},
-    {"manuscript_role": "Goal 3 Rest sensitivity", "source": "outputs/visualization/04_goal3/rest_reference_level_comparison.png", "status": "supplement candidate"},
-    {"manuscript_role": "Goal 4 distributed family validity", "source": "outputs/visualization/05_goal4/main_rater_stratified_alignment_and_denominators.png", "status": "candidate"},
-    {"manuscript_role": "Goal 4 reliability-subset agreement", "source": "outputs/visualization/05_goal4/reliability_prevalence_and_agreement.png", "status": "candidate if estimable"},
-    {"manuscript_role": "Goal 4 label-system comparison", "source": "outputs/visualization/05_goal4/main_distributed_minus_two_ra_delta_auc.png", "status": "candidate if estimable"},
+    {"manuscript_role": "Segmentation supplement", "source": "outputs/01_segmentation/figures/segmentation/silero/{accepted,flagged,excluded}/<recording>_silero.png", "status": "candidate"},
+    {"manuscript_role": "Goal 1 support panel", "source": "outputs/visualization/02_goal1/figures/metric_support_fraction.png", "status": "candidate"},
+    {"manuscript_role": "Goal 1 acquisition distributions", "source": "outputs/visualization/02_goal1/figures/raw_distributions__<family>.png", "status": "family facets"},
+    {"manuscript_role": "Goal 2 persistence", "source": "outputs/visualization/03_goal2/figures/participant_rank_persistence.png", "status": "candidate"},
+    {"manuscript_role": "Goal 3 structure", "source": "outputs/visualization/04_goal3/figures/correlation_and_support_matrices.png", "status": "candidate"},
+    {"manuscript_role": "Goal 3 Rest sensitivity", "source": "outputs/visualization/04_goal3/figures/rest_reference_level_comparison.png", "status": "supplement candidate"},
+    {"manuscript_role": "Goal 4 distributed family validity", "source": "outputs/visualization/05_goal4/figures/main_rater_stratified_alignment_and_denominators.png", "status": "candidate"},
+    {"manuscript_role": "Goal 4 reliability-subset agreement", "source": "outputs/visualization/05_goal4/figures/reliability_prevalence_and_agreement.png", "status": "candidate if estimable"},
+    {"manuscript_role": "Goal 4 label-system comparison", "source": "outputs/visualization/05_goal4/figures/main_distributed_minus_two_ra_delta_auc.png", "status": "candidate if estimable"},
 ])
 save_table(figure_candidates, "06_registry", "manuscript_figure_candidates")
 display(figure_candidates)
 """
+        ),
+        code(
+            r"""required_candidates = figure_candidates.loc[
+    ~figure_candidates["source"].str.contains("<family>", regex=False)
+]
+missing_candidates = required_candidates.loc[
+    ~required_candidates["source"].map(lambda value: (ROOT / value).exists())
+]
+registry_ready = stage_gate(
+    "Results registry",
+    not registry.empty and missing_candidates.empty,
+    [
+        f"Missing candidate output: {row.source}"
+        for row in missing_candidates.itertuples()
+    ],
+    "Freeze the manuscript-facing shortlist only after every required output is present.",
+)"""
         ),
     ],
 )

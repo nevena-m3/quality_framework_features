@@ -3,4 +3,4 @@
 from .registry import METRIC_REGISTRY, metric_registry_frame
 
 __all__ = ["METRIC_REGISTRY", "metric_registry_frame"]
-__version__ = "0.4.0"
+__version__ = "0.10.0"

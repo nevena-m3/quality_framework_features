@@ -9,7 +9,15 @@ The principal design decisions are:
 - create a separate 16-kHz mono view only for VAD and comparable frame analyses;
 - treat each Q metric as an observed proxy with its own support/status, not as a reflective latent scale;
 - never average heterogeneous metrics into an overall Q score without separate construct-validation evidence;
-- retain one logical recording when WAV/WEBM rows describe the same recording;
+- retain one logical recording when WAV/WEBM rows describe the same recording and
+  select a uniquely decodable WAV in preference to WEBM;
+- require an immutable, versioned data freeze before segmentation or feature extraction;
+- preserve one Silero diagnostic figure per recording; require explicit review of every
+  automatically flagged/excluded recording and accepted segmentation-only outlier; and
+  freeze recording eligibility and final primary boundaries before feature extraction;
+- automatically exclude frozen Bamboo rows with
+  `Task Completed as Instructed = NO`, while retaining the source value and exclusion
+  reason in the decision ledger;
 - cluster inference by participant and prevent repeated recordings from becoming pseudoreplicates;
 - estimate main perceptual alignment within RA and quantify four-RA agreement only in
   the crossed reliability subset before forming consensus;
@@ -17,13 +25,23 @@ The principal design decisions are:
 
 ## What is currently verifiable
 
-The uploaded metadata workbooks were audited and the results are summarized in `reports/reference_audit/REFERENCE_METADATA_AUDIT.md`. The repository also passes the included synthetic checks for segmentation guards, sentinel handling, additive-noise behavior, hard clipping, dropouts, reverberation tails, and rater consensus.
+The uploaded metadata workbooks were audited and the results are summarized in
+`reports/reference_audit/REFERENCE_METADATA_AUDIT.md`. The repository includes synthetic
+checks for segmentation guards, sentinel handling, additive-noise behavior, hard
+clipping, dropouts, reverberation tails, and rater consensus. Notebook 02a additionally
+runs and saves deterministic additive-interference dose-response, transient-separation,
+noise-type, and global-gain controls with explicit pass/fail criteria.
 
 The full empirical run remains intentionally unavailable in this environment because the
 audio directories and complete annotations are local to the study computer. The code is
 configured for the stated Windows root and can be run locally now. It recognizes rater
 identity from the four declared RA folders, excludes `Reliability` from the distributed
 main import, and separately validates the crossed 70-file reliability set.
+
+A **logical recording** is one recording event identified by the filename stem after the
+extension is removed. For example, matching `.wav` and `.webm` files are two encodings of
+one logical recording—not two observations. If both uniquely decode, `.wav` is selected
+for the primary frozen dataset and the pair remains available for encoding sensitivity.
 
 ## Windows setup
 
@@ -54,7 +72,18 @@ Do not change thresholds after inspecting associations with clinical outcomes or
 ```powershell
 paper1-qc --config config/project.yaml audit
 paper1-qc --config config/project.yaml inventory
+paper1-qc --config config/project.yaml freeze-template
+# Fill config/metadata_adjudication.csv; every row needs ALS, CONTROLS, or EXCLUDE.
+paper1-qc --config config/project.yaml freeze
 paper1-qc --config config/project.yaml segment
+# Inspect outputs/01_segmentation/figures/segmentation/silero/
+# and outputs/01_segmentation/segmentation/silero/.
+paper1-qc --config config/project.yaml segment-template
+# Use the segmentation notebook to listen/review and choose:
+# one-click KEEP+AUTO, optional KEEP+MANUAL, or EXCLUDE+NONE.
+paper1-qc --config config/project.yaml segment-adjudicate
+# This creates outputs/01_segmentation_after_review. Accepted and flagged
+# recordings proceed; excluded recordings do not.
 paper1-qc --config config/project.yaml extract --profile primary
 paper1-qc --config config/project.yaml assemble
 paper1-qc --config config/project.yaml describe
@@ -83,11 +112,13 @@ Bamboo–Rest pairs as a contextual acquisition sensitivity. Rest is summarized 
 whole-recording reference without speech VAD; unmatched or nearest-date Rest recordings
 are excluded from this comparison.
 
-The notebooks under `notebooks/` mirror the computational order and remain thin
-orchestration layers. The separate `visualization/` folder contains long-form audit code,
-intermediate figures, denominator tables, and paper-figure candidates for segmentation
-plus four study goals. Change reusable algorithms in the package, registry, and tests
-together; use the visualization notebooks to audit and present those saved results.
+The notebooks under `notebooks/` mirror the computational order. Reusable algorithms
+remain in the package, registry, and tests, while each feature-family notebook contains
+long-form visible audit code, definitions, checks, tables, figures, and a decision gate.
+The separate `visualization/` folder contains study-level audit code, intermediate
+figures, denominator tables, and paper-figure candidates for segmentation plus four
+study goals. Change reusable algorithms in the package, registry, and tests together;
+use both notebook layers to audit and present the saved results.
 
 See `docs/GIT_AND_WINDOWS_RUN_GUIDE.md` for exact PowerShell, Git, and notebook instructions.
 
@@ -95,26 +126,35 @@ See `docs/GIT_AND_WINDOWS_RUN_GUIDE.md` for exact PowerShell, Git, and notebook 
 
 | Stage | Required output | Gate before continuing |
 |---|---|---|
-| `00_audit` | audited rows, canonical recordings, issue ledgers, column profiles, media hashes/probes | resolve or disposition every error; freeze cohort provenance |
-| `01_segmentation` | interval table with raw/primary/strict views and profiles; error ledger | inspect support distributions and a stratified visual sample |
-| `02_features` | one metric row per logical Bamboo recording; family statuses; metric registry | zero silent failures; investigate impossible ranges and support failures |
+| `00_audit` | audited rows, canonical recordings, issue ledgers, column profiles, media hashes/probes | complete the adjudication template |
+| `MAIN outputs/00_DATA_FREEZE/<version>` | immutable included tables, complete ledger, issue dispositions, diagnosis provenance, hashes | no pending diagnosis; every included file resolves once and decodes |
+| `01_segmentation` | `figures/` plus `segmentation/` with one original-style plot/frame/segment artifact and one exact-edge boundary audit per recording | review all automatic failures, flags, and boundary outliers |
+| `01_segmentation_after_review` | post-review per-recording figures, frames, segments, boundary audits, and status tables split into accepted/flagged/excluded | accepted and flagged are eligible; excluded are audit-only |
+| `MAIN outputs/01_SEGMENTATION_FREEZE/<version>` | immutable decisions, final interval table, manual-override ledger, decision summary, manifest | review all mandatory rows and freeze eligibility plus final primary boundaries |
+| `02_features` | one metric row per logical Bamboo recording; metric-specific and family statuses; formula/unit/direction/support registry; deterministic control tables; separate family figures/tables | exact frozen-recording contract; no status/value mismatch, impossible range, under-supported primary metric, extraction error, or failed deterministic control |
 | `03_dataset_assembly` | validated one-to-one merge; explicit eligibility columns | reproduce the participant/recording flow diagram from saved counts |
 | `04_analysis` | clustered descriptive estimates, structure, persistence, rater-stratified main alignment, crossed-set four-RA agreement/consensus, paired detailed/2RA comparisons, sensitivity | verify denominators, confidence intervals, class support, direction/scale mapping, and blocked analyses |
 
-Every command saves CSV (and Parquet when available), an error ledger where relevant, and a run manifest containing configuration/input hashes and package versions.
+Every notebook stage creates separate `figures/` and `tables/` directories and ends with
+a visible PASS/BLOCKED decision gate. Commands save CSV (and Parquet when available), an
+error ledger where relevant, and a run manifest containing configuration/input hashes
+and package versions.
 
 ## Hard stops
 
 Stop rather than improvise if any of the following occurs:
 
-- the same filename resolves to zero or multiple disk paths;
+- a logical recording has no uniquely decodable encoding (WAV is preferred when both
+  WAV and WEBM are valid);
 - filename subject/date/task disagrees with metadata;
 - diagnosis is inferred from an ID but has not been reviewed;
 - a clinical sentinel or impossible score/date remains in an analysis field;
 - independent rater identity is absent, the folder design is inconsistent, or crossed
   reliability exports appear adjudicated rather than independent;
 - the class/category count is too small for the pre-specified estimand;
-- VAD or feature extraction fails without a saved error row;
+- VAD or feature extraction fails without a saved error row, a mandatory segmentation
+  review is incomplete, or feature extraction would use anything other than
+  `frozen_segmentation_intervals`;
 - a result requires treating WAV and WEBM copies or repeated visits as independent observations.
 
 See `docs/SCIENTIFIC_MEASUREMENT_PROTOCOL.md`, `docs/STATISTICAL_ANALYSIS_PLAN.md`, and `docs/ORIGINAL_PIPELINE_AUDIT_AND_CHANGES.md` before modifying the analysis.

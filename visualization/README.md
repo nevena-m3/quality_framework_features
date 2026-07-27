@@ -19,8 +19,9 @@ Each notebook has a `RUN_... = False` gate. On the first local run, change that 
 `True` to execute the required pipeline command(s). On later reporting runs, leave it
 `False` to visualize the frozen saved outputs without recomputing the analysis.
 
-All tables are saved as CSV and all figures as both PNG and SVG under
-`outputs/visualization/<notebook-stage>/`. Notebook outputs are not the source of truth;
+All tables are saved as CSV under
+`outputs/visualization/<notebook-stage>/tables/`, and all figures as PNG and SVG under
+`outputs/visualization/<notebook-stage>/figures/`. Notebook outputs are not the source of truth;
 the saved tables, figures, run manifests, configuration hash, and input hashes are.
 
 ## Four study goals used here

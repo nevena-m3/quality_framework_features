@@ -1,13 +1,28 @@
 # Statistical analysis plan
 
-Version: 0.4.0  
+Version: 0.9.0  
 Status: freeze before inspecting Q–clinical or Q–human associations
 
 ## 1. Analysis population and dependence
 
 The recording is the measurement unit and the participant is the resampling/inference cluster. Alternate encodings of one logical recording are technical replicates, not independent observations. Repeated visits are retained for distribution and persistence analyses but never treated as independent participants.
 
-Primary measurement eligibility requires an available/decodable Bamboo recording, task completed as instructed, usable speech support, successful extraction, and no severe segmentation failure. Diagnosis is not required to characterize metric behavior, but diagnosis contrasts require confirmed reported ALS/control status. ID-inferred controls remain excluded until reviewed.
+Primary measurement eligibility requires an available/decodable frozen Bamboo recording, task completed as instructed, usable speech support, successful extraction, and no severe segmentation failure. Diagnosis contrasts use `diagnosis_analysis` from the immutable freeze: reported ALS/control labels, evidence-backed reviewed identifier rules, or manual adjudications. Missing diagnoses that cannot be confirmed are explicitly excluded rather than assigned.
+
+Before Q extraction, all automatically flagged/excluded segmentations and accepted
+segmentation-only outliers undergo diagnosis/outcome-independent review. The
+accepted-outlier queue is
+defined by prespecified segmentation guardrails and median/MAD robust
+\(|z^*|\ge4.5\), never by Q metrics, human labels, diagnosis, or clinical outcomes.
+Recording eligibility and boundary provenance are separate decisions. Manual corrections
+replace only primary speech boundaries; automatic conservative/permissive profiles remain
+unchanged. All analyses consume `frozen_segmentation_intervals`.
+
+Primary automatic boundaries are unpadded Silero sample indices. The 30-ms frame mask is
+retained for the original visual/CSV audit only and is not used as the frozen timing
+source. Local boundary-energy disagreement prompts review but never changes a boundary
+automatically. Conservative and permissive profiles rerun Silero with prespecified
+threshold/duration settings; they are not cosmetic post-processing aliases.
 
 There is no global complete-case Q cohort. Each metric/family has its own support denominator. A flow table reports participant and recording counts at every gate.
 

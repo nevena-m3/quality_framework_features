@@ -13,6 +13,13 @@ This document records why the original implementation could not be used as the P
 - README and analysis-roadmap files were empty.
 - The environment freeze captured an entire machine-specific environment rather than a minimal reproducible project specification.
 - Old output directories contained large derived artifacts that could drift from current formulas and cohort metadata.
+- The original Silero notebook's accepted/flagged/excluded diagnostic plots were useful
+  for audit, but the downstream pipeline did not require a complete documented
+  KEEP/EXCLUDE decision table.
+
+The rebuild retains the original four-panel Silero diagnostic concept, saves one figure
+per logical recording under `accepted/`, `flagged/`, or `excluded/`, and blocks Q-metric
+extraction until every non-accepted recording is explicitly adjudicated.
 
 ## Measurement findings
 
@@ -90,4 +97,4 @@ The rebuild uses raw-order robust statistics, participant clustering, group-stra
 
 ## Intentional changes to the paper claim
 
-Version 0.4.0 does **not** claim a single latent Q vector or a validated overall quality score. It establishes a multidimensional registry of observed proxies and tests their behavior, support, redundancy, persistence, robustness, and perceptual family correspondence. Direction-oriented within-family percentile summaries are used only as secondary formative convergent-validity indices; they are not a global Q score. A latent/composite score would require a later construct-validation step with stable loadings, measurement invariance, and external validation.
+Version 0.6.0 does **not** claim a single latent Q vector or a validated overall quality score. It establishes a multidimensional registry of observed proxies and tests their behavior, support, redundancy, persistence, robustness, and perceptual family correspondence. Direction-oriented within-family percentile summaries are used only as secondary formative convergent-validity indices; they are not a global Q score. A latent/composite score would require a later construct-validation step with stable loadings, measurement invariance, and external validation.

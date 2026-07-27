@@ -258,7 +258,7 @@ def one_recording_per_participant(
 def participant_level_group_contrasts(
     frame: pd.DataFrame,
     *,
-    group_col: str = "diagnosis_reported",
+    group_col: str = "diagnosis_analysis",
     subject_col: str = "SubjectID",
     group_a: str = "ALS",
     group_b: str = "CONTROLS",

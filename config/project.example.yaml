@@ -2,6 +2,7 @@ project:
   name: paper1_remote_speech_qc
   random_seed: 20260713
   output_root: outputs
+  main_output_root: 'MAIN outputs'
 
 paths:
   # Single quotes are intentional: Windows backslashes remain literal in YAML.
@@ -28,6 +29,21 @@ cohort:
   # They are never promoted to confirmed diagnoses without review.
   control_id_patterns: ['^CNEC\d+$', '^C\d+$', '^TCV\d+$']
 
+data_freeze:
+  version: '2026-07-23_v1'
+  # Ivan's written data-delivery note explicitly identifies exact CNEC###, C##, and
+  # TCV### IDs as controls. These exact patterns are therefore confirmed here with
+  # provenance; suffixed variants require explicit subject-level confirmation below.
+  confirm_configured_control_id_patterns: true
+  control_id_rule_evidence: 'From Ivan.docx: data-manager-confirmed control identifier patterns'
+  # Put investigator-confirmed exceptional control IDs in local config/project.yaml.
+  # Keep the portable example empty because subject identifiers must not be committed.
+  confirmed_control_subject_ids: []
+  confirmed_control_subject_evidence: ''
+  diagnosis_adjudication: config/metadata_adjudication.csv
+  segmentation_adjudication: config/segmentation_adjudication.csv
+  manual_segmentation_overrides: config/manual_segmentation_overrides.csv
+
 clinical_alignment:
   primary_max_assessment_gap_days: 14
   sensitivity_max_assessment_gap_days: 30
@@ -35,22 +51,63 @@ clinical_alignment:
 
 vad:
   sampling_rate_hz: 16000
+  # Primary detection uses the version-pinned Silero defaults. The crucial
+  # boundary-sensitive changes are zero padding and no second bridge/filter pass.
   threshold: 0.50
   min_speech_ms: 250
   min_silence_ms: 100
-  speech_pad_ms: 30
-  bridge_gap_ms: 100
+  analysis_speech_pad_ms: 0
+  post_vad_bridge_gap_ms: 0
+  # The 30-ms layer preserves the original per-file CSVs and four-panel plot. It is
+  # a display representation only; frozen analysis boundaries retain sample indices.
+  original_pipeline_frame_ms: 30
   strict_speech_edge_ms: 50
   strict_nonspeech_edge_ms: 200
+  boundary_audit_window_ms: 120
+  boundary_audit_guard_ms: 20
+  boundary_audit_minimum_contrast_db: 3
   sensitivity_profiles:
     conservative:
-      bridge_gap_ms: 50
+      threshold: 0.65
+      min_speech_ms: 250
+      min_silence_ms: 100
       strict_speech_edge_ms: 100
       strict_nonspeech_edge_ms: 300
     permissive:
-      bridge_gap_ms: 150
+      threshold: 0.35
+      min_speech_ms: 100
+      min_silence_ms: 200
       strict_speech_edge_ms: 25
       strict_nonspeech_edge_ms: 100
+
+segmentation_review:
+  # After the separate locked Task Completed as Instructed = NO metadata gate,
+  # mandatory boundary-review selection uses segmentation outputs only—never
+  # diagnosis, clinical scores, Q metrics, or perceptual quality-family labels.
+  robust_z_threshold: 4.5
+  minimum_accepted_reference_n: 20
+  accepted_outlier_features:
+    - duration_sec
+    - speech_fraction
+    - n_speech_segments
+    - n_internal_nonspeech_segments
+    - leading_nonspeech_sec
+    - trailing_nonspeech_sec
+    - longest_internal_nonspeech_sec
+    - rms_db_median
+    - rms_db_std
+    - boundary_low_contrast_fraction
+    - boundary_min_contrast_db
+  accepted_guardrails:
+    speech_fraction_below: 0.10
+    n_speech_segments_at_least: 20
+    longest_internal_nonspeech_sec_at_least: 4.0
+    boundary_low_contrast_fraction_at_least: 0.50
+    duration_sec_below: 2.0
+
+segmentation_freeze:
+  # Increment this version deliberately if a completed segmentation freeze must change.
+  version: '2026-07-23_v1'
 
 metrics:
   frame_ms: 30

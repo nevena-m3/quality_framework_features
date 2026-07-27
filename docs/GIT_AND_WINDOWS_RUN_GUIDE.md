@@ -83,6 +83,18 @@ Do not create a manifest for this layout. The four top-level RA folders contain 
 main files (one independent RA per recording). The four `Reliability` folders contain the
 same approximately 70 recordings rated independently by all four RAs.
 
+In the local `config\project.yaml` only, record the investigator-confirmed exceptional
+controls and their evidence. These identifiers are deliberately absent from the tracked
+example configuration:
+
+```yaml
+data_freeze:
+  confirmed_control_subject_ids: ['C05-1', 'CNEC024-1']
+  confirmed_control_subject_evidence: 'Investigator confirmation on 2026-07-23, consistent with Ivan data-manager message'
+```
+
+Do not commit `config\project.yaml`; it contains local paths and participant identifiers.
+
 Before the 2RA comparison, verify the broad-QC codebook. If and only if `Yes` means that
 the artifact is present and `No` means it is absent, change:
 
@@ -99,15 +111,121 @@ Run these from the project root with the virtual environment active:
 ```powershell
 paper1-qc --config config/project.yaml audit
 paper1-qc --config config/project.yaml inventory
+paper1-qc --config config/project.yaml freeze-template
+```
+
+Open `config\metadata_adjudication.csv`. Every generated row must contain
+`ALS`, `CONTROLS`, or `EXCLUDE` in `diagnosis_analysis`, plus a nonblank
+`evidence_source`. Save it, then continue:
+
+```powershell
+paper1-qc --config config/project.yaml freeze
 paper1-qc --config config/project.yaml segment
+paper1-qc --config config/project.yaml segment-template
+```
+
+Open `notebooks\01_segmentation\01_segmentation_silero_full_dataset.ipynb` in Jupyter.
+The notebook creates a diagnosis/outcome-independent mandatory queue containing every flagged/excluded
+recording and accepted segmentation-only outliers. Non-outlying accepted recordings are
+pre-filled as `KEEP + AUTO`. The scrollable/searchable review widget shows every
+recording, the original PNG, boundary audit, audio player, review reasons, and an
+optional manual speech-boundary editor. Use **Keep Silero + next** for the ordinary case.
+Rows whose frozen metadata says `Task Completed as Instructed = NO` are automatically
+set to `EXCLUDE + NONE`, visibly documented, and locked.
+
+```text
+outputs\01_segmentation\figures\segmentation\silero\flagged\
+outputs\01_segmentation\figures\segmentation\silero\excluded\
+```
+
+The Silero command keeps all segmentation-stage artifacts under
+`outputs\01_segmentation`, with separate `figures` and `segmentation` branches:
+
+```text
+outputs\01_segmentation\
+  logs\silero_segmentation_config.json
+  segmentation\silero\
+    segments\<recording>_segments.csv
+    frames\<recording>_frames.csv
+    boundary_audit\<recording>_boundary_audit.csv
+    summary\silero_all_summary.csv
+  figures\segmentation\silero\
+    accepted\<recording>_silero.png
+    flagged\<recording>_silero.png
+    excluded\<recording>_silero.png
+    boundary_audit\<recording>_boundary_audit.png
+```
+
+There must be exactly one segment CSV, one frame CSV, one original-style PNG across
+the three status folders, one boundary-audit CSV, and one boundary-audit PNG for every
+frozen Bamboo recording. Primary boundaries are unpadded Silero sample indices and
+receive no second gap-bridge/filter pass. The 30-ms layer is retained only for the
+familiar visualization/CSV contract. Low local energy contrast prompts review but
+never moves a boundary automatically, because weak/breathy ALS speech can legitimately
+have low contrast.
+
+For each mandatory row choose:
+
+- `KEEP + AUTO` when Silero boundaries are usable;
+- `KEEP + MANUAL` when boundaries must be corrected, entering one
+  `start_sec,end_sec` speech interval per line and a reason;
+- `EXCLUDE + NONE` when the recording is unusable/non-task, with a reason.
+
+The reviewer and review date are required. Manual intervals must be previewed and must
+not be edited to remove noise or other artifacts. After the notebook reports zero
+pending/incomplete reviews, set `RUN_SEGMENTATION_ADJUDICATION=True`. This runs:
+
+```powershell
+paper1-qc --config config/project.yaml segment-adjudicate
+```
+
+Confirm both freeze tables exist before continuing:
+
+```text
+MAIN outputs\01_SEGMENTATION_FREEZE\<version>\frozen_segmentation_decisions.csv
+MAIN outputs\01_SEGMENTATION_FREEZE\<version>\frozen_segmentation_intervals.csv
+```
+
+Also confirm the separate post-review artifact tree exists:
+
+```text
+outputs\01_segmentation_after_review\
+  segmentation\silero\
+    segments\accepted|flagged|excluded\
+    frames\accepted|flagged|excluded\
+    boundary_audit\accepted|flagged|excluded\
+    summary\silero_after_review_summary.csv
+  figures\segmentation\silero\
+    accepted|flagged|excluded\
+    boundary_audit\accepted|flagged|excluded\
+  tables\reviewed_segmentation_recordings.csv
+  tables\reviewed_segmentation_intervals.csv
+  tables\reviewed_segmentation_status_counts.csv
+```
+
+`accepted` and `flagged` are both retained for feature extraction. `flagged` means the
+recording remains visibly auditable after required review or manual boundary editing;
+it does not mean exclusion. Only `excluded` recordings are removed downstream.
+
+This directory is immutable. If a justified correction is required after freezing,
+increment `segmentation_freeze.version` in local `config\project.yaml`; never overwrite
+the prior version. Archive/rename the matching `outputs\01_segmentation_after_review`
+directory before deliberately creating a revised freeze.
+
+Then run:
+
+```powershell
 paper1-qc --config config/project.yaml extract --profile primary
 paper1-qc --config config/project.yaml assemble
 paper1-qc --config config/project.yaml describe
 ```
 
-Stop and review the corresponding error/issue tables after every command. Do not proceed
-past unresolved metadata errors, ambiguous file paths, failed decoding, or unexplained
-support failures.
+Stop and review the corresponding `tables\` and `figures\` directories after every
+notebook stage. Do not proceed past an incomplete diagnosis adjudication, unresolved
+metadata errors, a logical recording without one selected decodable encoding, failed
+decoding, incomplete Silero adjudication, or unexplained support failures. When valid WAV
+and WEBM copies have the same logical recording name, the freeze selects WAV; the paired
+encoding command later treats them as technical replicates.
 
 Run the required sensitivities:
 
