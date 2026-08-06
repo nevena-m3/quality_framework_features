@@ -1,8 +1,0 @@
-check,passed,observed,required
-pause level monotonic with noise dose,True,0.9999999999999999,>0.99
-contrast decreases with noise dose,True,-0.9999999999999999,<-0.99
-contrast rises with independent speech level,True,all noise strata,rho>0.99
-contrast falls with independent pause noise,True,all speech strata,rho<-0.99
-IQR rises with AM depth,True,1.0,>0.95
-white flatness exceeds colored and in-band tonal controls,True,0.5611799960049346,"greater than pink, brown, and 437-Hz tone; 50/60 Hz are below the 80-Hz flatness band"
-hum score rises with injected comb level,True,both 50/60,rho>0.95

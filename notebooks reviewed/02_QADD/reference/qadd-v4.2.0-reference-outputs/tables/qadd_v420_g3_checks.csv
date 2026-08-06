@@ -1,8 +1,0 @@
-check,passed,observed,required
-pause level gain equivariance,True,0.0,<1e-8 dB
-relative/shape gain invariance,True,3.552713678800501e-15,<1e-8
-polarity invariance,True,evaluated,all <1e-8
-DC-offset invariance after local mean removal,True,evaluated,all <1e-8
-common time-shift invariance,True,evaluated,all <1e-8
-lossless codec regression,True,0.0024094670633560966,maximum absolute change <0.01 in native feature units
-lossy codec preflight tolerances,True,0.8768127020302927,all feature-specific tolerance ratios <=1.0

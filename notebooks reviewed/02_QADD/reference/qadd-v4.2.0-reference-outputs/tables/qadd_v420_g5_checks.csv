@@ -1,9 +1,0 @@
-check,passed,observed,required
-colored/AM noise joint false-positive rate,True,0.0,<=0.05
-off-grid comb joint false-positive rate,True,0.0,<=0.25
-single-tone joint false-positive rate,True,0.0,<=0.10
-50/60-Hz comb sensitivity,True,1.0,>=0.95
-generic breath/competing-speech controls raise recorded pause energy,True,38.19390202464005,>20 dB above low-noise reference
-generic breath/competing-speech controls do not falsely satisfy hum joint evidence,True,0.0,0.0
-competing-talker identity explicitly unresolved,True,generic additive-energy response only,no source-identity claim
-voiced-like confounds explicitly characterized,True,['voiced_like_f0_60'],reported; conditional claim

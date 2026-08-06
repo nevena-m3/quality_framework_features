@@ -1,7 +1,0 @@
-{
-  "measurement_version": "qdist-v3.1.1",
-  "automated_tests": "96 passed",
-  "test_command": "PYTHONPATH=src pytest tests/test_qdist_v30.py tests/test_qdist_notebook_v300.py -q",
-  "scope": "module, notebook synchronization, numerical, synthetic, quantization, exact-rail, native-geometry, and claim-boundary tests",
-  "cohort_status": "not run in this environment; local frozen media required"
-}

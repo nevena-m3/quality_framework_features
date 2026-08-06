@@ -1,4 +1,0 @@
-check,passed,observed,required
-floor-censored level is NaN,True,floor_censored,floor_censored + raw retained
-spectral support independent of level censoring,True,ok_moderate,feature-specific status
-insufficient level support is unavailable not zero,True,insufficient_support,insufficient_support + NaN

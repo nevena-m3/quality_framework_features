@@ -1,6 +1,0 @@
-{
-  "measurement_version": "qadd-v4.2.0-candidate",
-  "figure": "A_construct_response",
-  "source_data": "A_construct_response.source.csv",
-  "evidence_type": "synthetic prespecified controls"
-}

@@ -1,4 +1,0 @@
-feature,provisional_role,status,rationale
-qdist_hard_clipped_frame_fraction,PRIMARY,RETAIN_PENDING_STANDARDIZED_COHORT_AUDIT,Most interpretable prevalence view of accepted plateau evidence; exact ledger reconstruction required.
-qdist_hard_clip_event_rate_per_min,PRIMARY_EVENT,RETAIN_PENDING_MERGE_STABILITY_AND_G9,Frequency of merged clipping episodes; highest-risk view because it depends on the merge-gap rule.
-qdist_hard_clipped_sample_fraction,SECONDARY,RETAIN_PENDING_STANDARDIZED_COHORT_AUDIT,Channel-sample burden from the same accepted plateau ledger; related and sparse.

@@ -1,3 +1,0 @@
-source_sample_rate_hz,qadd_pause_ac_level_dbfs_median_difference,qadd_pause_level_iqr_db_difference,qadd_speech_pause_level_contrast_db_difference,qadd_pause_spectral_flatness_difference,qadd_mains_hum_comb_score_db_difference
-44100,-0.21347535601840661,-0.001253960647161989,0.21492864372726217,-4.096018972443716e-06,-5.757042181198102e-05
-48000,-0.21409437829466071,-0.0012697182820105013,0.21539398743724192,-4.842152744655159e-06,-3.9093132320644486e-05
