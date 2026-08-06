@@ -42,28 +42,28 @@ context_columns:
 # direction-oriented family indices constructed from the frozen metric registry.
 perceptual_metric_map:
   additive_interference:
-    - qadd_nonspeech_level_dbfs
-    - qadd_snr_proxy_db
-    - qadd_nonspeech_variability_db
-    - qadd_hum_prominence_db
-    - qadd_transient_rate_per_min
+    - qadd_pause_ac_level_dbfs_median
+    - qadd_pause_level_iqr_db
+    - qadd_speech_pause_level_contrast_db
+    - qadd_pause_spectral_flatness
+    - qadd_mains_hum_comb_score_db
   gain_dynamics:
-    - qgain_level_iqr_db
-    - qgain_segment_sd_db
+    - qgain_within_segment_iqr_db
+    - qgain_between_segment_mad_db
     - qgain_abs_drift_db_per_min
   reverberation_tail:
-    - qrev_tail_excess_db
-    - qrev_decay_time_proxy_sec
+    - qrev_tail_excess_100ms_db
+    - qrev_tail_persistence_median_sec
+    - qrev_srmr_norm
   channel_device:
-    - qchan_effective_bandwidth_hz
+    - qchan_ltas_distance_db
+    - qchan_rolloff95_deficit_hz
+    - qchan_highband_ratio_deficit
   nonlinear_distortion:
-    - qdist_hard_clip_sample_fraction
-    - qdist_clip_event_rate_per_min
-    - qdist_clipped_frame_fraction
-  temporal_discontinuity:
-    - qtemp_zero_dropout_fraction
-    - qtemp_zero_dropout_rate_per_min
-    - qtemp_duplicate_window_rate_per_min
+    - qdist_hard_clipped_sample_fraction
+    - qdist_hard_clip_event_rate_per_min
+  # QTEMP has no validated primary feature in the latest reviewed release.
+  temporal_discontinuity: []
 
 # These are merged metadata fields produced by a different two-RA workflow.
 # The individual two-RA decisions are not available in the metadata, so their

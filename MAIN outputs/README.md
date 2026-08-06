@@ -9,8 +9,14 @@ This directory contains the pipeline's authoritative and reviewed deliverables. 
 02_FEATURE_FREEZE/              Approved feature freeze
 02_FEATURE_TABLES/              Main feature tables
 02_FEATURE_TABLES_EXPLORATORY/ Exploratory feature tables
+02_FEATURE_LATEST/             Compact latest reviewed release (start here)
 02_FEATURE_REVIEWED/            Reviewed feature workflow and deliverables
 ```
+
+For normal use, open `02_FEATURE_LATEST/`. It contains one merged recording-level
+table, one normalized registry, and exactly one numbered folder per feature family.
+The larger `02_FEATURE_REVIEWED/` tree is the scientific evidence and provenance
+area; it is not the main analysis input.
 
 `02_FEATURE_REVIEWED/` is organized as follows:
 

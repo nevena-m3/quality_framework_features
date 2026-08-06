@@ -264,6 +264,24 @@ On Windows, `RUN_QTEMP_FINALIZE.cmd` executes the final notebook and checks the 
 
 ### Stage 03 — Dataset assembly
 
+After all family reviews/finalizations are complete, create the compact release:
+
+```powershell
+paper1-qc --config config\project.yaml reviewed-release
+```
+
+The normal user entry point is `MAIN outputs/02_FEATURE_LATEST/`:
+
+- `recording_features.csv`: latest reviewed features merged across families;
+- `feature_registry.csv`: roles, units, direction, version, and status field;
+- `families/01_QGAIN` through `families/06_QTEMP`: one concise folder per family;
+- `release_manifest.csv`: exact reviewed source files and SHA-256 hashes.
+
+QTEMP is included as a documented disposition and contributes zero validated
+primary features. Detailed review ledgers, figures, freezes, and passports remain
+in `02_FEATURE_REVIEWED/`; users do not need those files to assemble the dataset.
+The `assemble` command rebuilds this compact release and consumes it directly.
+
 | Order | Notebook | Purpose | Principal output |
 |---|---|---|---|
 | 4 | `notebooks/03_dataset_assembly/03a_assemble_analysis_dataset.ipynb` | Performs validated one-to-one merges and creates explicit measurement, diagnosis, segmentation, clinical, and eligibility gates. | `outputs/03_dataset_assembly/paper1_analysis_dataset.csv`, plus audit tables and figures. |
@@ -331,6 +349,7 @@ MAIN outputs/
   02_FEATURE_FREEZE/                Approved feature freeze
   02_FEATURE_TABLES/                Main feature tables
   02_FEATURE_TABLES_EXPLORATORY/   Explicitly exploratory feature tables
+  02_FEATURE_LATEST/                Compact latest reviewed release (start here)
   02_FEATURE_REVIEWED/              Reviewed feature workflow and products
 ```
 
@@ -373,6 +392,7 @@ Available commands:
 | `segment-template` | Create or refresh segmentation review and manual-boundary tables. |
 | `segment-adjudicate` | Validate decisions/overrides and freeze final intervals. |
 | `extract` | Extract registered quality metrics. |
+| `reviewed-release` | Build the compact latest release from reviewed family artifacts. |
 | `assemble` | Merge audited metadata and metrics with explicit eligibility gates. |
 | `rest-reference` | Extract exact-session Rest context. |
 | `encoding-sensitivity` | Re-extract paired WAV/WEBM technical replicates. |

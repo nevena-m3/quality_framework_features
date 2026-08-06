@@ -16,8 +16,10 @@ from scipy import stats
 try:
     from tqdm import tqdm
 except ImportError:  # pragma: no cover - progress display is non-essential
+
     def tqdm(iterable, **_kwargs):
         return iterable
+
 
 from .config import load_config, resolve_data_path, resolve_executable, resolve_project_path
 from .freeze import (
@@ -46,6 +48,10 @@ from .metadata import audit_metadata_workbook, exact_session_pairs, reconcile_wo
 from .metrics import extract_all_metrics, rest_reference_metrics
 from .provenance import write_run_manifest
 from .registry import metric_registry_frame
+from .reviewed_features import (
+    build_latest_feature_release,
+    load_latest_feature_release,
+)
 from .segmentation import (
     LEGACY_SILERO_FRAME_COLUMNS,
     LEGACY_SILERO_SEGMENT_COLUMNS,
@@ -132,9 +138,11 @@ def _write_table(frame: pd.DataFrame, path_without_suffix: Path) -> None:
 def _as_bool(series: pd.Series) -> pd.Series:
     """Normalize booleans reloaded from CSV without treating 'False' as truthy."""
     return series.map(
-        lambda value: value
-        if isinstance(value, bool)
-        else str(value).strip().lower() in {"true", "1", "yes", "y"}
+        lambda value: (
+            value
+            if isinstance(value, bool)
+            else str(value).strip().lower() in {"true", "1", "yes", "y"}
+        )
     ).fillna(False)
 
 
@@ -143,7 +151,9 @@ def _audit_kwargs(cfg: dict) -> dict:
         "sentinel_values": cfg["clinical_alignment"]["sentinel_values"],
         "control_id_patterns": cfg["cohort"]["control_id_patterns"],
         "media_preference": cfg["cohort"]["media_preference"],
-        "max_primary_assessment_gap_days": cfg["clinical_alignment"]["primary_max_assessment_gap_days"],
+        "max_primary_assessment_gap_days": cfg["clinical_alignment"][
+            "primary_max_assessment_gap_days"
+        ],
     }
 
 
@@ -157,7 +167,9 @@ def command_audit(cfg: dict) -> None:
     missing = [str(path) for path in inputs.values() if not path.exists()]
     if missing:
         raise FileNotFoundError(f"Metadata files not found: {missing}")
-    audits = {name: audit_metadata_workbook(path, **_audit_kwargs(cfg)) for name, path in inputs.items()}
+    audits = {
+        name: audit_metadata_workbook(path, **_audit_kwargs(cfg)) for name, path in inputs.items()
+    }
     for name, audit in audits.items():
         _write_table(audit.clean_media_rows, output / f"{name}_media_rows_audited")
         _write_table(audit.canonical_recordings, output / f"{name}_canonical_recordings")
@@ -170,7 +182,9 @@ def command_audit(cfg: dict) -> None:
     )
     _write_table(reconciliation, output / "cross_workbook_summary")
     _write_table(discrepancies, output / "cross_workbook_discrepancies")
-    pairs = exact_session_pairs(audits["bamboo"].canonical_recordings, audits["rest"].canonical_recordings)
+    pairs = exact_session_pairs(
+        audits["bamboo"].canonical_recordings, audits["rest"].canonical_recordings
+    )
     _write_table(pairs, output / "exact_bamboo_rest_session_pairs")
     _write_table(metric_registry_frame(), output / "metric_registry")
     write_run_manifest(
@@ -201,13 +215,19 @@ def command_inventory(cfg: dict, *, hashes: bool) -> None:
         metadata_path = output / f"{role}_media_rows_audited.parquet"
         metadata_csv = output / f"{role}_media_rows_audited.csv"
         if metadata_path.exists() or metadata_csv.exists():
-            metadata = pd.read_parquet(metadata_path) if metadata_path.exists() else pd.read_csv(metadata_csv)
+            metadata = (
+                pd.read_parquet(metadata_path)
+                if metadata_path.exists()
+                else pd.read_csv(metadata_csv)
+            )
             coverage, duplicates = reconcile_inventory_with_metadata(inventory, metadata)
             consistency = audit_native_metadata_consistency(inventory, metadata)
             _write_table(coverage, output / f"{role}_media_coverage")
             _write_table(duplicates, output / f"{role}_duplicate_disk_names")
             _write_table(consistency, output / f"{role}_native_metadata_consistency_issues")
-    combined_inventory = pd.concat(inventories, ignore_index=True) if inventories else pd.DataFrame()
+    combined_inventory = (
+        pd.concat(inventories, ignore_index=True) if inventories else pd.DataFrame()
+    )
     _write_table(combined_inventory, output / "all_media_inventory")
     write_run_manifest(
         output / "inventory_run_manifest.json",
@@ -226,9 +246,7 @@ def _freeze_settings(cfg: dict) -> dict:
             settings.get("confirm_configured_control_id_patterns", False)
         ),
         "control_rule_evidence": str(settings.get("control_id_rule_evidence", "")).strip(),
-        "confirmed_control_subject_ids": settings.get(
-            "confirmed_control_subject_ids", []
-        ),
+        "confirmed_control_subject_ids": settings.get("confirmed_control_subject_ids", []),
         "confirmed_control_subject_evidence": str(
             settings.get("confirmed_control_subject_evidence", "")
         ).strip(),
@@ -340,9 +358,7 @@ def command_freeze(cfg: dict) -> None:
             confirm_control_patterns=settings["confirm_control_patterns"],
             control_rule_evidence=settings["control_rule_evidence"],
             confirmed_control_subject_ids=settings["confirmed_control_subject_ids"],
-            confirmed_control_subject_evidence=settings[
-                "confirmed_control_subject_evidence"
-            ],
+            confirmed_control_subject_evidence=settings["confirmed_control_subject_evidence"],
         )
         pending = sorted(
             resolved.loc[resolved["diagnosis_resolution"].eq("pending"), "SubjectID"].unique()
@@ -395,9 +411,7 @@ def command_freeze(cfg: dict) -> None:
 
     pair_inputs = {}
     for role, ledger in ledgers.items():
-        included = ledger.loc[
-            ledger["freeze_included"] & ledger["date_analysis_eligible"]
-        ].copy()
+        included = ledger.loc[ledger["freeze_included"] & ledger["date_analysis_eligible"]].copy()
         included["Recording date"] = pd.to_datetime(included["recording_date_analysis"])
         pair_inputs[role] = included
     pairs = exact_session_pairs(pair_inputs["bamboo"], pair_inputs["rest"])
@@ -454,9 +468,7 @@ def command_freeze(cfg: dict) -> None:
         input_paths=input_paths,
         extra={
             "freeze_version": cfg.get("data_freeze", {}).get("version", "v1"),
-            "frozen_bamboo_recordings": int(
-                ledgers["bamboo"]["freeze_included"].sum()
-            ),
+            "frozen_bamboo_recordings": int(ledgers["bamboo"]["freeze_included"].sum()),
             "frozen_rest_recordings": int(ledgers["rest"]["freeze_included"].sum()),
             "exact_bamboo_rest_pairs": int(len(pairs)),
         },
@@ -523,9 +535,11 @@ def command_segment(cfg: dict) -> None:
         )
 
     canonical = _read_frozen(cfg, "frozen_bamboo_recordings")
-    paths_by_name = canonical.set_index("Raw Media File name")["media_path"].map(
-        lambda value: [value]
-    ).to_dict()
+    paths_by_name = (
+        canonical.set_index("Raw Media File name")["media_path"]
+        .map(lambda value: [value])
+        .to_dict()
+    )
     ffmpeg = resolve_executable(cfg["software"]["ffmpeg"], "ffmpeg")
     ffprobe = resolve_executable(cfg["software"]["ffprobe"], "ffprobe")
     vad = cfg["vad"]
@@ -544,8 +558,7 @@ def command_segment(cfg: dict) -> None:
         )
     if diagnostic_frame_ms != 30:
         raise ValueError(
-            "Original-style per-recording artifacts require "
-            "vad.original_pipeline_frame_ms=30."
+            "Original-style per-recording artifacts require vad.original_pipeline_frame_ms=30."
         )
     boundary_window_ms = float(vad.get("boundary_audit_window_ms", 120))
     boundary_guard_ms = float(vad.get("boundary_audit_guard_ms", 20))
@@ -623,12 +636,8 @@ def command_segment(cfg: dict) -> None:
         if len(candidates) != 1:
             error = f"expected 1 path; found {len(candidates)}"
             errors.append({"file_name": file_name, "stage": "resolve_path", "error": error})
-            pd.DataFrame(columns=LEGACY_SILERO_SEGMENT_COLUMNS).to_csv(
-                segments_path, index=False
-            )
-            pd.DataFrame(columns=LEGACY_SILERO_FRAME_COLUMNS).to_csv(
-                frames_path, index=False
-            )
+            pd.DataFrame(columns=LEGACY_SILERO_SEGMENT_COLUMNS).to_csv(segments_path, index=False)
+            pd.DataFrame(columns=LEGACY_SILERO_FRAME_COLUMNS).to_csv(frames_path, index=False)
             pd.DataFrame().to_csv(boundary_table_path, index=False)
             failure = {
                 "method": "silero_vad",
@@ -641,9 +650,7 @@ def command_segment(cfg: dict) -> None:
                 "logical_recording_id": logical_id,
                 "SubjectID": row["SubjectID"],
                 "diagnosis_analysis": row["diagnosis_analysis"],
-                "Task Completed as Instructed": row.get(
-                    "Task Completed as Instructed", pd.NA
-                ),
+                "Task Completed as Instructed": row.get("Task Completed as Instructed", pd.NA),
                 "qc_status": "excluded",
                 "qc_flags": "processing_error",
                 "processing_error": error,
@@ -673,10 +680,7 @@ def command_segment(cfg: dict) -> None:
                 onnx=onnx,
                 model=silero_model,
             )
-            raw = [
-                Interval(item["start"] / 16000, item["end"] / 16000)
-                for item in timestamps
-            ]
+            raw = [Interval(item["start"] / 16000, item["end"] / 16000) for item in timestamps]
             views = build_segmentation_views(
                 raw,
                 duration_sec=duration,
@@ -733,8 +737,7 @@ def command_segment(cfg: dict) -> None:
             )
             boundary_edges = 2 * len(boundary_audit)
             low_contrast_edges = int(
-                boundary_audit["ambiguous_onset"].sum()
-                + boundary_audit["ambiguous_offset"].sum()
+                boundary_audit["ambiguous_onset"].sum() + boundary_audit["ambiguous_offset"].sum()
             )
             summary.update(
                 {
@@ -744,9 +747,7 @@ def command_segment(cfg: dict) -> None:
                     "boundary_edges": boundary_edges,
                     "boundary_low_contrast_edges": low_contrast_edges,
                     "boundary_low_contrast_fraction": (
-                        low_contrast_edges / boundary_edges
-                        if boundary_edges > 0
-                        else np.nan
+                        low_contrast_edges / boundary_edges if boundary_edges > 0 else np.nan
                     ),
                     "boundary_min_contrast_db": (
                         float(
@@ -764,9 +765,7 @@ def command_segment(cfg: dict) -> None:
                 }
             )
             summary.update(classify_reading_segmentation(summary))
-            plot_path = (
-                legacy_figures / summary["qc_status"] / f"{stem}_silero.png"
-            )
+            plot_path = legacy_figures / summary["qc_status"] / f"{stem}_silero.png"
             summary.update(
                 {
                     "file_name": file_name,
@@ -778,9 +777,7 @@ def command_segment(cfg: dict) -> None:
                     "logical_recording_id": logical_id,
                     "SubjectID": row["SubjectID"],
                     "diagnosis_analysis": row["diagnosis_analysis"],
-                    "Task Completed as Instructed": row.get(
-                        "Task Completed as Instructed", pd.NA
-                    ),
+                    "Task Completed as Instructed": row.get("Task Completed as Instructed", pd.NA),
                     "processing_error": "",
                     "segments_path": str(segments_path),
                     "frames_path": str(frames_path),
@@ -803,12 +800,8 @@ def command_segment(cfg: dict) -> None:
                 sensitivity_timestamps = silero_speech_timestamps(
                     audio.analysis_16k,
                     threshold=overrides.get("threshold", vad["threshold"]),
-                    min_speech_ms=overrides.get(
-                        "min_speech_ms", vad["min_speech_ms"]
-                    ),
-                    min_silence_ms=overrides.get(
-                        "min_silence_ms", vad["min_silence_ms"]
-                    ),
+                    min_speech_ms=overrides.get("min_speech_ms", vad["min_speech_ms"]),
+                    min_silence_ms=overrides.get("min_silence_ms", vad["min_silence_ms"]),
                     speech_pad_ms=0,
                     onnx=onnx,
                     model=silero_model,
@@ -836,12 +829,8 @@ def command_segment(cfg: dict) -> None:
         except Exception as exc:  # error ledger is part of the stage contract
             error = repr(exc)
             errors.append({"file_name": file_name, "stage": "segmentation", "error": error})
-            pd.DataFrame(columns=LEGACY_SILERO_SEGMENT_COLUMNS).to_csv(
-                segments_path, index=False
-            )
-            pd.DataFrame(columns=LEGACY_SILERO_FRAME_COLUMNS).to_csv(
-                frames_path, index=False
-            )
+            pd.DataFrame(columns=LEGACY_SILERO_SEGMENT_COLUMNS).to_csv(segments_path, index=False)
+            pd.DataFrame(columns=LEGACY_SILERO_FRAME_COLUMNS).to_csv(frames_path, index=False)
             pd.DataFrame().to_csv(boundary_table_path, index=False)
             failure = {
                 "method": "silero_vad",
@@ -854,9 +843,7 @@ def command_segment(cfg: dict) -> None:
                 "logical_recording_id": logical_id,
                 "SubjectID": row["SubjectID"],
                 "diagnosis_analysis": row["diagnosis_analysis"],
-                "Task Completed as Instructed": row.get(
-                    "Task Completed as Instructed", pd.NA
-                ),
+                "Task Completed as Instructed": row.get("Task Completed as Instructed", pd.NA),
                 "qc_status": "excluded",
                 "qc_flags": "processing_error",
                 "processing_error": error,
@@ -882,9 +869,7 @@ def command_segment(cfg: dict) -> None:
         .rename_axis("qc_status")
         .reset_index(name="logical_recordings")
     )
-    qc_counts["percent"] = (
-        100 * qc_counts["logical_recordings"] / max(1, len(summary_frame))
-    )
+    qc_counts["percent"] = 100 * qc_counts["logical_recordings"] / max(1, len(summary_frame))
     flag_counts = (
         summary_frame["qc_flags"]
         .fillna("")
@@ -904,12 +889,8 @@ def command_segment(cfg: dict) -> None:
         .rename_axis("qc_status")
         .reset_index(name="n")
     )
-    legacy_qc_counts["percent"] = (
-        100 * legacy_qc_counts["n"] / max(1, len(summary_frame))
-    )
-    legacy_qc_counts.to_csv(
-        legacy_summary / "silero_qc_status_counts.csv", index=False
-    )
+    legacy_qc_counts["percent"] = 100 * legacy_qc_counts["n"] / max(1, len(summary_frame))
+    legacy_qc_counts.to_csv(legacy_summary / "silero_qc_status_counts.csv", index=False)
     legacy_top_flags = (
         summary_frame["qc_flags"]
         .fillna("")
@@ -920,9 +901,7 @@ def command_segment(cfg: dict) -> None:
         .rename_axis("qc_flags")
         .reset_index(name="n")
     )
-    legacy_top_flags.to_csv(
-        legacy_summary / "silero_top_qc_flags.csv", index=False
-    )
+    legacy_top_flags.to_csv(legacy_summary / "silero_top_qc_flags.csv", index=False)
     for destination in [output, tables]:
         _write_table(intervals, destination / "bamboo_segmentation_intervals")
         _write_table(summary_frame, destination / "bamboo_segmentation_summary")
@@ -1003,9 +982,7 @@ def command_segment_template(cfg: dict) -> None:
         cfg,
         _read_existing(output, "bamboo_segmentation_summary"),
     )
-    template = segmentation_adjudication_template(
-        summary, cfg.get("segmentation_review", {})
-    )
+    template = segmentation_adjudication_template(summary, cfg.get("segmentation_review", {}))
     destination = _segmentation_adjudication_path(cfg)
     destination.parent.mkdir(parents=True, exist_ok=True)
     if destination.exists():
@@ -1015,9 +992,7 @@ def command_segment_template(cfg: dict) -> None:
             backup.write_bytes(destination.read_bytes())
             print(f"Backed up prior review sheet: {backup}")
         existing_by_id = (
-            existing.assign(
-                logical_recording_id=existing["logical_recording_id"].astype(str)
-            )
+            existing.assign(logical_recording_id=existing["logical_recording_id"].astype(str))
             .drop_duplicates("logical_recording_id", keep="last")
             .set_index("logical_recording_id")
         )
@@ -1034,9 +1009,7 @@ def command_segment_template(cfg: dict) -> None:
             reviewer = str(old.get("reviewer", "")).strip()
             source = str(old.get("boundary_source", "")).strip().upper()
             if not source:
-                source = "AUTO" if decision == "KEEP" else (
-                    "NONE" if decision == "EXCLUDE" else ""
-                )
+                source = "AUTO" if decision == "KEEP" else ("NONE" if decision == "EXCLUDE" else "")
             preserve = decision in {"KEEP", "EXCLUDE"}
             if bool(row["review_required"]) and row["automatic_qc_status"] == "accepted":
                 preserve = preserve and bool(reviewer)
@@ -1048,9 +1021,7 @@ def command_segment_template(cfg: dict) -> None:
                 template.loc[index, "decision"] = decision
                 template.loc[index, "boundary_source"] = source
                 template.loc[index, "reviewer"] = reviewer
-                template.loc[index, "review_date"] = str(
-                    old.get("review_date", "")
-                ).strip()
+                template.loc[index, "review_date"] = str(old.get("review_date", "")).strip()
                 template.loc[index, "notes"] = str(old.get("notes", "")).strip()
         print(f"Upgraded/refreshed segmentation review sheet: {destination}")
     else:
@@ -1060,14 +1031,10 @@ def command_segment_template(cfg: dict) -> None:
     override_path = _manual_segmentation_overrides_path(cfg)
     override_path.parent.mkdir(parents=True, exist_ok=True)
     if not override_path.exists():
-        pd.DataFrame(columns=MANUAL_SEGMENTATION_COLUMNS).to_csv(
-            override_path, index=False
-        )
+        pd.DataFrame(columns=MANUAL_SEGMENTATION_COLUMNS).to_csv(override_path, index=False)
         print(f"Wrote empty manual-boundary table: {override_path}")
 
-    review_queue = template.loc[
-        _as_bool(template["review_required"])
-    ].copy()
+    review_queue = template.loc[_as_bool(template["review_required"])].copy()
     _write_table(review_queue, tables / "segmentation_review_queue")
     selection_summary = (
         template.groupby(
@@ -1133,8 +1100,7 @@ def _materialize_reviewed_segmentation_output(
     manual_by_id = (
         manual_artifacts.assign(
             logical_recording_id=manual_artifacts["logical_recording_id"].astype(str)
-        )
-        .set_index("logical_recording_id")
+        ).set_index("logical_recording_id")
         if not manual_artifacts.empty
         else pd.DataFrame()
     )
@@ -1185,9 +1151,7 @@ def _materialize_reviewed_segmentation_output(
         ):
             final_status = "flagged"
             final_reason = (
-                "kept_after_required_review"
-                if review_required
-                else "kept_with_manual_boundaries"
+                "kept_after_required_review" if review_required else "kept_with_manual_boundaries"
             )
         else:
             final_status = "accepted"
@@ -1210,12 +1174,8 @@ def _materialize_reviewed_segmentation_output(
                 "automatic_segments_path": str(row.get("segments_path", "")),
                 "automatic_frames_path": str(row.get("frames_path", "")),
                 "automatic_plot_path": str(row.get("plot_path", "")),
-                "automatic_boundary_audit_path": str(
-                    row.get("boundary_audit_path", "")
-                ),
-                "automatic_boundary_plot_path": str(
-                    row.get("boundary_plot_path", "")
-                ),
+                "automatic_boundary_audit_path": str(row.get("boundary_audit_path", "")),
+                "automatic_boundary_plot_path": str(row.get("boundary_plot_path", "")),
             }
         )
         reviewed["segments_path"] = copy_artifact(
@@ -1238,20 +1198,14 @@ def _materialize_reviewed_segmentation_output(
         )
         reviewed["boundary_audit_path"] = copy_artifact(
             artifact_row.get("boundary_audit_path", ""),
-            silero_root
-            / "boundary_audit"
-            / final_status
-            / f"{stem}_boundary_audit.csv",
+            silero_root / "boundary_audit" / final_status / f"{stem}_boundary_audit.csv",
             file_name=file_name,
             artifact="boundary audit CSV",
             required=False,
         )
         reviewed["boundary_plot_path"] = copy_artifact(
             artifact_row.get("boundary_plot_path", ""),
-            figure_root
-            / "boundary_audit"
-            / final_status
-            / f"{stem}_boundary_audit.png",
+            figure_root / "boundary_audit" / final_status / f"{stem}_boundary_audit.png",
             file_name=file_name,
             artifact="boundary audit figure",
             required=False,
@@ -1260,15 +1214,13 @@ def _materialize_reviewed_segmentation_output(
 
     reviewed_summary = pd.DataFrame(reviewed_rows)
     if len(reviewed_summary) != len(frozen):
-        raise RuntimeError(
-            "Reviewed-output materialization changed the recording count."
-        )
-    if not reviewed_summary["analysis_included"].eq(
-        reviewed_summary["final_review_status"].isin(["accepted", "flagged"])
-    ).all():
-        raise RuntimeError(
-            "Reviewed-output status and downstream inclusion are inconsistent."
-        )
+        raise RuntimeError("Reviewed-output materialization changed the recording count.")
+    if (
+        not reviewed_summary["analysis_included"]
+        .eq(reviewed_summary["final_review_status"].isin(["accepted", "flagged"]))
+        .all()
+    ):
+        raise RuntimeError("Reviewed-output status and downstream inclusion are inconsistent.")
     status_summary = (
         reviewed_summary.groupby(
             [
@@ -1312,18 +1264,12 @@ def _materialize_reviewed_segmentation_output(
         extra={
             "recordings": int(len(reviewed_summary)),
             "analysis_included": int(reviewed_summary["analysis_included"].sum()),
-            "accepted": int(
-                reviewed_summary["final_review_status"].eq("accepted").sum()
-            ),
+            "accepted": int(reviewed_summary["final_review_status"].eq("accepted").sum()),
             "flagged_but_included": int(
                 reviewed_summary["final_review_status"].eq("flagged").sum()
             ),
-            "excluded": int(
-                reviewed_summary["final_review_status"].eq("excluded").sum()
-            ),
-            "status_contract": (
-                "accepted and flagged proceed downstream; excluded do not"
-            ),
+            "excluded": int(reviewed_summary["final_review_status"].eq("excluded").sum()),
+            "status_contract": ("accepted and flagged proceed downstream; excluded do not"),
         },
     )
     return reviewed_summary, status_summary
@@ -1363,14 +1309,10 @@ def command_segment_adjudicate(cfg: dict) -> None:
     )
     override_path = _manual_segmentation_overrides_path(cfg)
     if override_path.exists():
-        manual_overrides = pd.read_csv(
-            override_path, dtype=str, keep_default_na=False
-        )
+        manual_overrides = pd.read_csv(override_path, dtype=str, keep_default_na=False)
     else:
         manual_overrides = pd.DataFrame(columns=MANUAL_SEGMENTATION_COLUMNS)
-    validated_overrides = validate_manual_segmentation_overrides(
-        manual_overrides, frozen
-    )
+    validated_overrides = validate_manual_segmentation_overrides(manual_overrides, frozen)
     automatic_intervals = _read_existing(output, "bamboo_segmentation_intervals")
     frozen_intervals = freeze_segmentation_intervals(
         automatic_intervals,
@@ -1382,9 +1324,7 @@ def command_segment_adjudicate(cfg: dict) -> None:
 
     manual_segments_dir = output / "segmentation" / "manual_review" / "segments"
     manual_frames_dir = output / "segmentation" / "manual_review" / "frames"
-    manual_boundary_dir = (
-        output / "segmentation" / "manual_review" / "boundary_audit"
-    )
+    manual_boundary_dir = output / "segmentation" / "manual_review" / "boundary_audit"
     manual_figures_dir = output / "figures" / "manual_review"
     manual_boundary_figures_dir = manual_figures_dir / "boundary_audit"
     for directory, pattern in [
@@ -1402,14 +1342,11 @@ def command_segment_adjudicate(cfg: dict) -> None:
     ffprobe = resolve_executable(cfg["software"]["ffprobe"], "ffprobe")
     manual_artifact_rows = []
     manual_decisions = frozen.loc[
-        frozen["decision"].eq("KEEP")
-        & frozen["boundary_source"].eq("MANUAL")
+        frozen["decision"].eq("KEEP") & frozen["boundary_source"].eq("MANUAL")
     ]
     for decision in manual_decisions.itertuples():
         override_rows = validated_overrides.loc[
-            validated_overrides["logical_recording_id"].eq(
-                str(decision.logical_recording_id)
-            )
+            validated_overrides["logical_recording_id"].eq(str(decision.logical_recording_id))
         ].sort_values("segment_index")
         timestamps = [
             {
@@ -1418,9 +1355,7 @@ def command_segment_adjudicate(cfg: dict) -> None:
             }
             for row in override_rows.itertuples()
         ]
-        audio = decode_audio_views(
-            str(decision.file_path), ffmpeg=ffmpeg, ffprobe=ffprobe
-        )
+        audio = decode_audio_views(str(decision.file_path), ffmpeg=ffmpeg, ffprobe=ffprobe)
         frames, segments = legacy_silero_artifacts(
             audio.analysis_16k,
             16000,
@@ -1432,13 +1367,8 @@ def command_segment_adjudicate(cfg: dict) -> None:
         segments_path = manual_segments_dir / f"{stem}_manual_segments.csv"
         frames_path = manual_frames_dir / f"{stem}_manual_frames.csv"
         plot_path = manual_figures_dir / f"{stem}_manual.png"
-        boundary_path = (
-            manual_boundary_dir / f"{stem}_manual_boundary_audit.csv"
-        )
-        boundary_plot_path = (
-            manual_boundary_figures_dir
-            / f"{stem}_manual_boundary_audit.png"
-        )
+        boundary_path = manual_boundary_dir / f"{stem}_manual_boundary_audit.csv"
+        boundary_plot_path = manual_boundary_figures_dir / f"{stem}_manual_boundary_audit.png"
         segments.to_csv(segments_path, index=False)
         frames.to_csv(frames_path, index=False)
         manual_summary = summarize_legacy_silero_artifacts(
@@ -1462,8 +1392,7 @@ def command_segment_adjudicate(cfg: dict) -> None:
             save_path=plot_path,
         )
         manual_primary = [
-            Interval(float(row.start_sec), float(row.end_sec))
-            for row in override_rows.itertuples()
+            Interval(float(row.start_sec), float(row.end_sec)) for row in override_rows.itertuples()
         ]
         boundary_audit = boundary_alignment_diagnostics(
             audio.analysis_16k,
@@ -1472,9 +1401,7 @@ def command_segment_adjudicate(cfg: dict) -> None:
             displayed_segments=segments,
             window_ms=float(cfg["vad"].get("boundary_audit_window_ms", 120)),
             guard_ms=float(cfg["vad"].get("boundary_audit_guard_ms", 20)),
-            minimum_contrast_db=float(
-                cfg["vad"].get("boundary_audit_minimum_contrast_db", 3)
-            ),
+            minimum_contrast_db=float(cfg["vad"].get("boundary_audit_minimum_contrast_db", 3)),
         )
         boundary_audit.to_csv(boundary_path, index=False)
         plot_boundary_alignment_audit(
@@ -1484,9 +1411,7 @@ def command_segment_adjudicate(cfg: dict) -> None:
             boundary_audit,
             file_name=f"{decision.file_name} | manual boundary audit",
             save_path=boundary_plot_path,
-            minimum_contrast_db=float(
-                cfg["vad"].get("boundary_audit_minimum_contrast_db", 3)
-            ),
+            minimum_contrast_db=float(cfg["vad"].get("boundary_audit_minimum_contrast_db", 3)),
         )
         manual_artifact_rows.append(
             {
@@ -1505,12 +1430,8 @@ def command_segment_adjudicate(cfg: dict) -> None:
         )
 
     _write_table(frozen, tables / "frozen_segmentation_decisions")
-    _write_table(
-        frozen_intervals, tables / "frozen_segmentation_intervals"
-    )
-    _write_table(
-        validated_overrides, tables / "frozen_manual_segmentation_overrides"
-    )
+    _write_table(frozen_intervals, tables / "frozen_segmentation_intervals")
+    _write_table(validated_overrides, tables / "frozen_manual_segmentation_overrides")
     manual_artifact_frame = pd.DataFrame(
         manual_artifact_rows,
         columns=[
@@ -1561,34 +1482,26 @@ def command_segment_adjudicate(cfg: dict) -> None:
         dir=reviewed_output.parent,
     ) as reviewed_staging_directory:
         reviewed_staging = Path(reviewed_staging_directory) / "payload"
-        reviewed_summary, reviewed_status_summary = (
-            _materialize_reviewed_segmentation_output(
-                destination=reviewed_staging,
-                published_destination=reviewed_output,
-                frozen=frozen,
-                frozen_intervals=frozen_intervals,
-                manual_artifacts=manual_artifact_frame,
-                cfg=cfg,
-                input_paths=reviewed_input_paths,
-            )
+        reviewed_summary, reviewed_status_summary = _materialize_reviewed_segmentation_output(
+            destination=reviewed_staging,
+            published_destination=reviewed_output,
+            frozen=frozen,
+            frozen_intervals=frozen_intervals,
+            manual_artifacts=manual_artifact_frame,
+            cfg=cfg,
+            input_paths=reviewed_input_paths,
         )
         with tempfile.TemporaryDirectory(
             prefix=f".{freeze_root.name}.staging-",
             dir=freeze_root.parent,
         ) as staging_directory:
             staging = Path(staging_directory)
-            frozen.to_csv(
-                staging / "frozen_segmentation_decisions.csv", index=False
-            )
-            frozen_intervals.to_csv(
-                staging / "frozen_segmentation_intervals.csv", index=False
-            )
+            frozen.to_csv(staging / "frozen_segmentation_decisions.csv", index=False)
+            frozen_intervals.to_csv(staging / "frozen_segmentation_intervals.csv", index=False)
             validated_overrides.to_csv(
                 staging / "frozen_manual_segmentation_overrides.csv", index=False
             )
-            decision_summary.to_csv(
-                staging / "segmentation_decision_summary.csv", index=False
-            )
+            decision_summary.to_csv(staging / "segmentation_decision_summary.csv", index=False)
             reviewed_status_summary.to_csv(
                 staging / "reviewed_segmentation_status_counts.csv",
                 index=False,
@@ -1628,16 +1541,14 @@ def command_segment_adjudicate(cfg: dict) -> None:
             override_path,
         ],
         extra={
-            "frozen_primary_boundary_source_counts": frozen[
-                "boundary_source"
-            ].value_counts(dropna=False).to_dict(),
+            "frozen_primary_boundary_source_counts": frozen["boundary_source"]
+            .value_counts(dropna=False)
+            .to_dict(),
             "manual_override_recordings": int(len(manual_decisions)),
         },
     )
     print(decision_summary.to_string(index=False))
-    print(
-        "\nPost-review status (accepted and flagged proceed; excluded do not):"
-    )
+    print("\nPost-review status (accepted and flagged proceed; excluded do not):")
     print(reviewed_status_summary.to_string(index=False))
     print(f"\nReviewed segmentation artifacts: {reviewed_output}")
 
@@ -1661,9 +1572,7 @@ def command_extract(cfg: dict, *, profile: str = "primary") -> None:
     segmentation_decisions = _read_existing(
         _segmentation_freeze_root(cfg), "frozen_segmentation_decisions"
     )
-    segmentation_eligible = _as_bool(
-        segmentation_decisions["segmentation_analysis_eligible"]
-    )
+    segmentation_eligible = _as_bool(segmentation_decisions["segmentation_analysis_eligible"])
     eligible_ids = set(
         segmentation_decisions.loc[
             segmentation_eligible,
@@ -1677,9 +1586,11 @@ def command_extract(cfg: dict, *, profile: str = "primary") -> None:
         _segmentation_freeze_root(cfg),
         "frozen_segmentation_intervals",
     )
-    paths_by_name = canonical.set_index("Raw Media File name")["media_path"].map(
-        lambda value: [value]
-    ).to_dict()
+    paths_by_name = (
+        canonical.set_index("Raw Media File name")["media_path"]
+        .map(lambda value: [value])
+        .to_dict()
+    )
     ffmpeg = resolve_executable(cfg["software"]["ffmpeg"], "ffmpeg")
     ffprobe = resolve_executable(cfg["software"]["ffprobe"], "ffprobe")
     results = []
@@ -1688,11 +1599,22 @@ def command_extract(cfg: dict, *, profile: str = "primary") -> None:
         file_name = row["Raw Media File name"]
         candidates = paths_by_name.get(file_name, [])
         if len(candidates) != 1:
-            errors.append({"file_name": file_name, "stage": "resolve_path", "error": f"expected 1 path; found {len(candidates)}"})
+            errors.append(
+                {
+                    "file_name": file_name,
+                    "stage": "resolve_path",
+                    "error": f"expected 1 path; found {len(candidates)}",
+                }
+            )
             continue
         try:
             views = _views_for_file(intervals, file_name, profile=profile)
-            required = {"raw_speech", "primary_speech", "strict_speech", "strict_internal_nonspeech"}
+            required = {
+                "raw_speech",
+                "primary_speech",
+                "strict_speech",
+                "strict_internal_nonspeech",
+            }
             for missing in required - set(views):
                 views[missing] = []
             audio = decode_audio_views(candidates[0], ffmpeg=ffmpeg, ffprobe=ffprobe)
@@ -1709,7 +1631,9 @@ def command_extract(cfg: dict, *, profile: str = "primary") -> None:
                 }
             )
         except Exception as exc:
-            errors.append({"file_name": file_name, "stage": "feature_extraction", "error": repr(exc)})
+            errors.append(
+                {"file_name": file_name, "stage": "feature_extraction", "error": repr(exc)}
+            )
     feature_frame = pd.DataFrame(results)
     suffix = "" if profile == "primary" else f"_{profile}"
     _write_table(feature_frame, output / f"bamboo_q_metrics{suffix}")
@@ -1728,9 +1652,16 @@ def command_assemble(cfg: dict) -> None:
     root = _output_root(cfg)
     output = root / "03_dataset_assembly"
     metadata = _read_frozen(cfg, "frozen_bamboo_recordings")
-    segmentation = _read_existing(
-        _segmentation_freeze_root(cfg), "frozen_segmentation_decisions"
-    )
+    segmentation = _read_existing(_segmentation_freeze_root(cfg), "frozen_segmentation_decisions")
+    if "qc_flags" not in segmentation:
+        legacy_flag_columns = [
+            column for column in ("qc_flags_y", "qc_flags_x") if column in segmentation
+        ]
+        if not legacy_flag_columns:
+            raise ValueError("Frozen segmentation decisions lack a QC-flags field")
+        segmentation["qc_flags"] = segmentation[legacy_flag_columns[0]]
+        for column in legacy_flag_columns[1:]:
+            segmentation["qc_flags"] = segmentation["qc_flags"].fillna(segmentation[column])
     metadata = metadata.merge(
         segmentation[
             [
@@ -1752,14 +1683,35 @@ def command_assemble(cfg: dict) -> None:
         how="left",
         validate="one_to_one",
     )
-    features = _read_existing(root / "02_features", "bamboo_q_metrics")
+    release = build_latest_feature_release(cfg["_project_root"])
+    features, reviewed_registry = load_latest_feature_release(cfg["_project_root"])
+    reviewed_names = set(reviewed_registry["feature"].astype(str))
+    legacy_names = set(metric_registry_frame()["feature"].astype(str)) - reviewed_names
+    leaked = sorted(legacy_names.intersection(features.columns))
+    if leaked:
+        raise ValueError(f"Legacy feature columns entered the reviewed release: {leaked}")
+    if "SubjectID" in features:
+        subject_check = metadata[["logical_recording_id", "SubjectID"]].merge(
+            features[["logical_recording_id", "SubjectID"]],
+            on="logical_recording_id",
+            how="inner",
+            suffixes=("_metadata", "_features"),
+            validate="one_to_one",
+        )
+        mismatch = (
+            subject_check["SubjectID_metadata"]
+            .astype(str)
+            .ne(subject_check["SubjectID_features"].astype(str))
+        )
+        if mismatch.any():
+            raise ValueError("Reviewed feature SubjectID values do not match frozen metadata")
     features = features.drop(
-        columns=["diagnosis_reported", "diagnosis_analysis", "Recording date"],
+        columns=["SubjectID", "file_name", "recording_date_analysis", "Recording date"],
         errors="ignore",
     )
     merged = metadata.merge(
         features,
-        on=["logical_recording_id", "SubjectID"],
+        on="logical_recording_id",
         how="left",
         suffixes=("_metadata", ""),
         validate="one_to_one",
@@ -1768,10 +1720,11 @@ def command_assemble(cfg: dict) -> None:
     task_completed = merged["Task Completed as Instructed"].astype(str).str.upper()
     merged["hard_exclusion_task_not_completed"] = task_completed.eq("NO")
     merged["review_task_completion_missing"] = merged["Task Completed as Instructed"].isna()
-    merged["hard_exclusion_segmentation"] = ~_as_bool(
-        merged["segmentation_analysis_eligible"]
-    )
-    merged["hard_exclusion_no_usable_speech"] = merged["qgain_status"].eq("insufficient_support")
+    merged["hard_exclusion_segmentation"] = ~_as_bool(merged["segmentation_analysis_eligible"])
+    qgain_status = merged.get("qgain_within_segment_iqr_db_status")
+    if qgain_status is None:
+        raise ValueError("Reviewed QGAIN status field is missing from the latest release")
+    merged["hard_exclusion_no_usable_speech"] = qgain_status.astype(str).ne("measured")
     merged["feature_extraction_missing"] = merged["_merge"].ne("both")
     merged["confirmed_analysis_diagnosis"] = merged["diagnosis_analysis"].isin(
         cfg["cohort"]["allowed_diagnoses"]
@@ -1796,7 +1749,9 @@ def command_assemble(cfg: dict) -> None:
     merged["clinical_30day_sensitivity_eligible"] = (
         merged["primary_measurement_eligible"]
         & merged["date_analysis_eligible"].fillna(False)
-        & assessment_delta.abs().le(cfg["clinical_alignment"]["sensitivity_max_assessment_gap_days"])
+        & assessment_delta.abs().le(
+            cfg["clinical_alignment"]["sensitivity_max_assessment_gap_days"]
+        )
         & pd.to_numeric(merged["ALSFRS total score"], errors="coerce").notna()
     )
     merged = merged.drop(columns="_merge")
@@ -1825,9 +1780,20 @@ def command_assemble(cfg: dict) -> None:
         config_path=cfg["_config_path"],
         input_paths=[
             _data_freeze_root(cfg) / "frozen_bamboo_recordings.csv",
-            root / "02_features" / "bamboo_q_metrics.csv",
+            Path(release["output_root"]) / "recording_features.csv",
+            Path(release["output_root"]) / "feature_registry.csv",
         ],
+        extra={
+            "feature_source": "reviewed_latest_release",
+            "reviewed_feature_count": int(len(reviewed_registry)),
+            "qtemp_validated_primary_feature_count": 0,
+        },
     )
+
+
+def command_reviewed_release(cfg: dict) -> None:
+    result = build_latest_feature_release(cfg["_project_root"])
+    print(json.dumps(result, indent=2))
 
 
 def command_rest_reference(cfg: dict) -> None:
@@ -1838,9 +1804,9 @@ def command_rest_reference(cfg: dict) -> None:
     rest = _read_frozen(cfg, "frozen_rest_recordings")
     target_ids = set(pairs["logical_recording_id_rest"].astype(str))
     rest = rest.loc[rest["logical_recording_id"].astype(str).isin(target_ids)].copy()
-    paths_by_name = rest.set_index("Raw Media File name")["media_path"].map(
-        lambda value: [value]
-    ).to_dict()
+    paths_by_name = (
+        rest.set_index("Raw Media File name")["media_path"].map(lambda value: [value]).to_dict()
+    )
     ffmpeg = resolve_executable(cfg["software"]["ffmpeg"], "ffmpeg")
     ffprobe = resolve_executable(cfg["software"]["ffprobe"], "ffprobe")
     rows = []
@@ -1850,7 +1816,11 @@ def command_rest_reference(cfg: dict) -> None:
         candidates = paths_by_name.get(file_name, [])
         if len(candidates) != 1:
             errors.append(
-                {"file_name": file_name, "stage": "resolve_path", "error": f"expected 1 path; found {len(candidates)}"}
+                {
+                    "file_name": file_name,
+                    "stage": "resolve_path",
+                    "error": f"expected 1 path; found {len(candidates)}",
+                }
             )
             continue
         try:
@@ -1872,32 +1842,27 @@ def command_rest_reference(cfg: dict) -> None:
     _write_table(pd.DataFrame(errors), output / "rest_reference_errors")
 
     bamboo = _read_existing(root / "02_features", "bamboo_q_metrics")
-    comparison = (
-        pairs.merge(
-            rest_metrics,
-            on=["logical_recording_id_rest", "SubjectID"],
-            how="left",
-            validate="one_to_one",
-        )
-        .merge(
-            bamboo,
-            left_on=["logical_recording_id_bamboo", "SubjectID"],
-            right_on=["logical_recording_id", "SubjectID"],
-            how="left",
-            suffixes=("_pair", "_bamboo"),
-            validate="one_to_one",
-        )
+    comparison = pairs.merge(
+        rest_metrics,
+        on=["logical_recording_id_rest", "SubjectID"],
+        how="left",
+        validate="one_to_one",
+    ).merge(
+        bamboo,
+        left_on=["logical_recording_id_bamboo", "SubjectID"],
+        right_on=["logical_recording_id", "SubjectID"],
+        how="left",
+        suffixes=("_pair", "_bamboo"),
+        validate="one_to_one",
     )
-    comparison["bamboo_guarded_pause_minus_rest_level_db"] = (
-        pd.to_numeric(comparison["qadd_nonspeech_level_dbfs"], errors="coerce")
-        - pd.to_numeric(comparison["restref_level_dbfs"], errors="coerce")
-    )
+    comparison["bamboo_guarded_pause_minus_rest_level_db"] = pd.to_numeric(
+        comparison["qadd_nonspeech_level_dbfs"], errors="coerce"
+    ) - pd.to_numeric(comparison["restref_level_dbfs"], errors="coerce")
     _write_table(comparison, output / "exact_session_bamboo_rest_comparison")
     rest_columns = [
         column
         for column in comparison.columns
-        if column.startswith("restref_")
-        or column == "bamboo_guarded_pause_minus_rest_level_db"
+        if column.startswith("restref_") or column == "bamboo_guarded_pause_minus_rest_level_db"
     ]
     summary_rows = []
     for column in rest_columns:
@@ -1955,7 +1920,11 @@ def command_encoding_sensitivity(cfg: dict) -> None:
         candidates = paths_by_name.get(file_name, [])
         if len(candidates) != 1:
             errors.append(
-                {"file_name": file_name, "stage": "resolve_path", "error": f"expected 1 path; found {len(candidates)}"}
+                {
+                    "file_name": file_name,
+                    "stage": "resolve_path",
+                    "error": f"expected 1 path; found {len(candidates)}",
+                }
             )
             continue
         try:
@@ -1988,7 +1957,9 @@ def command_encoding_sensitivity(cfg: dict) -> None:
                 }
             )
         except Exception as exc:
-            errors.append({"file_name": file_name, "stage": "encoding_sensitivity", "error": repr(exc)})
+            errors.append(
+                {"file_name": file_name, "stage": "encoding_sensitivity", "error": repr(exc)}
+            )
     metrics = pd.DataFrame(rows)
     _write_table(metrics, output / "paired_encoding_q_metrics_long")
     _write_table(pd.DataFrame(errors), output / "paired_encoding_errors")
@@ -2012,7 +1983,11 @@ def command_encoding_sensitivity(cfg: dict) -> None:
         right = pd.to_numeric(paired[right_column], errors="coerce")
         complete = left.notna() & right.notna()
         rho = float("nan")
-        if complete.sum() >= 10 and left[complete].nunique() >= 3 and right[complete].nunique() >= 3:
+        if (
+            complete.sum() >= 10
+            and left[complete].nunique() >= 3
+            and right[complete].nunique() >= 3
+        ):
             rho = float(stats.spearmanr(left[complete], right[complete]).statistic)
         comparison_rows.append(
             {
@@ -2022,7 +1997,9 @@ def command_encoding_sensitivity(cfg: dict) -> None:
                 "median_webm_minus_wav": float((right[complete] - left[complete]).median())
                 if complete.any()
                 else float("nan"),
-                "median_absolute_difference": float((right[complete] - left[complete]).abs().median())
+                "median_absolute_difference": float(
+                    (right[complete] - left[complete]).abs().median()
+                )
                 if complete.any()
                 else float("nan"),
             }
@@ -2062,14 +2039,11 @@ def _rater_workload_and_prevalence(ratings: pd.DataFrame) -> pd.DataFrame:
         )
     work = ratings.copy()
     work["rating_numeric"] = pd.to_numeric(work["rating"], errors="coerce")
-    summary = (
-        work.groupby(["rater_id", "category"], as_index=False)
-        .agg(
-            n_recordings=("file_name", "nunique"),
-            positive_recordings=("rating_numeric", lambda values: int((values == 1).sum())),
-            negative_recordings=("rating_numeric", lambda values: int((values == 0).sum())),
-            positive_prevalence=("rating_numeric", "mean"),
-        )
+    summary = work.groupby(["rater_id", "category"], as_index=False).agg(
+        n_recordings=("file_name", "nunique"),
+        positive_recordings=("rating_numeric", lambda values: int((values == 1).sum())),
+        negative_recordings=("rating_numeric", lambda values: int((values == 0).sum())),
+        positive_prevalence=("rating_numeric", "mean"),
     )
     return summary
 
@@ -2088,8 +2062,7 @@ def _distributed_design_summary(
     total_match = len(observed) == expected_raters
     valid = bool(one_per_item and total_match and names_match)
     summary = (
-        coverage.groupby("category", as_index=False)
-        .agg(
+        coverage.groupby("category", as_index=False).agg(
             items_total=("file_name", "nunique"),
             minimum_raters_per_item=("n_raters", "min"),
             maximum_raters_per_item=("n_raters", "max"),
@@ -2240,19 +2213,20 @@ def _command_human_qc_distributed(
             "and main_distributed_design_summary.csv."
         )
 
-    main_labels = ratings[
-        ["file_name", "rater_id", "category", "rating"]
-    ].rename(columns={"rating": "consensus_rating"})
-    main_labels["consensus_method"] = (
-        "single_independent_rater_in_distributed_four_ra_design"
+    main_labels = ratings[["file_name", "rater_id", "category", "rating"]].rename(
+        columns={"rating": "consensus_rating"}
     )
+    main_labels["consensus_method"] = "single_independent_rater_in_distributed_four_ra_design"
     main_labels["n_ratings"] = 1
     _write_table(main_labels, output / "main_distributed_family_labels")
 
     dataset_root = _output_root(cfg) / "03_dataset_assembly"
     features = _read_existing(dataset_root, "paper1_analysis_dataset")
     features = features.loc[features["primary_measurement_eligible"].fillna(False)].copy()
-    family_indices, index_audit = direction_oriented_family_indices(features)
+    _, reviewed_registry = load_latest_feature_release(cfg["_project_root"])
+    family_indices, index_audit = direction_oriented_family_indices(
+        features, registry_frame=reviewed_registry
+    )
     _write_table(family_indices, output / "direction_oriented_q_family_indices_secondary")
     _write_table(index_audit, output / "q_family_index_orientation_audit")
 
@@ -2305,6 +2279,7 @@ def _command_human_qc_distributed(
             schema["perceptual_metric_map"],
             bootstrap_replicates=bootstrap_replicates,
             seed=seed,
+            registry_frame=reviewed_registry,
         )
         _write_table(
             links,
@@ -2335,9 +2310,8 @@ def _command_human_qc_distributed(
         )
         observed_rel_names = sorted(rel_ratings["rater_id"].dropna().astype(str).unique())
         configured_rel_names = sorted(map(str, expected_names))
-        rel_names_valid = (
-            len(observed_rel_names) == expected_raters
-            and (not configured_rel_names or observed_rel_names == configured_rel_names)
+        rel_names_valid = len(observed_rel_names) == expected_raters and (
+            not configured_rel_names or observed_rel_names == configured_rel_names
         )
         complete_keys = rel_coverage.loc[
             rel_coverage["complete_expected_raters"], ["file_name", "category"]
@@ -2349,14 +2323,10 @@ def _command_human_qc_distributed(
             validate="many_to_one",
         )
         rel_valid = (
-            not _has_import_errors(rel_issues)
-            and rel_names_valid
-            and not complete_rel.empty
+            not _has_import_errors(rel_issues) and rel_names_valid and not complete_rel.empty
         )
         reliability_status = (
-            "complete_subset_estimable"
-            if rel_valid
-            else "blocked_import_rater_or_coverage_error"
+            "complete_subset_estimable" if rel_valid else "blocked_import_rater_or_coverage_error"
         )
         _write_table(
             pd.DataFrame(
@@ -2490,9 +2460,7 @@ def _command_human_qc_distributed(
     broad = schema.get("broad_metadata", {})
     broad_labels, direction_audit = _broad_metadata_labels(features, broad)
     _write_table(direction_audit, output / "two_ra_broad_direction_and_scale_audit")
-    comparison_targets: list[tuple[str, pd.DataFrame]] = [
-        ("main_distributed", main_labels)
-    ]
+    comparison_targets: list[tuple[str, pd.DataFrame]] = [("main_distributed", main_labels)]
     if not reliability_consensus.empty:
         comparison_targets.append(("reliability_four_ra_consensus", reliability_consensus))
     if not broad_labels.empty:
@@ -2649,9 +2617,7 @@ def command_human_qc(cfg: dict, schema_path: str | None) -> None:
         }
         ratings, issues = load_human_qc_long(source, **kwargs)
 
-    item_coverage, design_summary = rating_design_coverage(
-        ratings, expected_raters=expected_raters
-    )
+    item_coverage, design_summary = rating_design_coverage(ratings, expected_raters=expected_raters)
     _write_table(item_coverage, output / "rating_design_item_coverage")
     _write_table(design_summary, output / "rating_design_summary")
     _write_table(ratings, output / "ratings_long")
@@ -2663,9 +2629,7 @@ def command_human_qc(cfg: dict, schema_path: str | None) -> None:
     )
     design_estimable = (
         not design_summary.empty
-        and design_summary["design_status"].eq(
-            "agreement_estimable_on_complete_subset"
-        ).all()
+        and design_summary["design_status"].eq("agreement_estimable_on_complete_subset").all()
     )
     if blocking_import or not design_estimable:
         write_run_manifest(
@@ -2721,18 +2685,18 @@ def command_human_qc(cfg: dict, schema_path: str | None) -> None:
         .rename("n")
         .reset_index()
     )
-    rater_marginals["proportion_within_category_rater"] = rater_marginals["n"] / rater_marginals.groupby(
-        ["category", "rater_id"]
-    )["n"].transform("sum")
+    rater_marginals["proportion_within_category_rater"] = rater_marginals[
+        "n"
+    ] / rater_marginals.groupby(["category", "rater_id"])["n"].transform("sum")
     consensus_distribution = (
         consensus.groupby(["category", "consensus_rating"], dropna=False)
         .size()
         .rename("n")
         .reset_index()
     )
-    consensus_distribution["proportion_within_category"] = consensus_distribution["n"] / consensus_distribution.groupby(
-        "category"
-    )["n"].transform("sum")
+    consensus_distribution["proportion_within_category"] = consensus_distribution[
+        "n"
+    ] / consensus_distribution.groupby("category")["n"].transform("sum")
     _write_table(rater_marginals, output / "rater_marginal_distributions")
     _write_table(agreement, output / "interrater_agreement")
     _write_table(
@@ -2745,7 +2709,10 @@ def command_human_qc(cfg: dict, schema_path: str | None) -> None:
 
     features = _read_existing(root / "03_dataset_assembly", "paper1_analysis_dataset")
     features = features.loc[features["primary_measurement_eligible"].fillna(False)].copy()
-    family_indices, index_audit = direction_oriented_family_indices(features)
+    _, reviewed_registry = load_latest_feature_release(cfg["_project_root"])
+    family_indices, index_audit = direction_oriented_family_indices(
+        features, registry_frame=reviewed_registry
+    )
     _write_table(family_indices, output / "direction_oriented_q_family_indices_secondary")
     _write_table(index_audit, output / "q_family_index_orientation_audit")
     four_ra_alignment = family_alignment_matrix(
@@ -2775,6 +2742,7 @@ def command_human_qc(cfg: dict, schema_path: str | None) -> None:
             schema["perceptual_metric_map"],
             bootstrap_replicates=cfg["analysis"]["bootstrap_replicates"],
             seed=cfg["project"]["random_seed"],
+            registry_frame=reviewed_registry,
         )
         _write_table(links, output / "four_ra_feature_level_links_secondary")
 
@@ -2804,9 +2772,7 @@ def command_human_qc(cfg: dict, schema_path: str | None) -> None:
         for family, column in broad["family_columns"].items():
             if column not in features:
                 continue
-            normalized = (
-                features[column].astype("string").str.strip().str.upper().map(value_map)
-            )
+            normalized = features[column].astype("string").str.strip().str.upper().map(value_map)
             for index in features.index[normalized.notna()]:
                 label_rows.append(
                     {
@@ -2924,36 +2890,36 @@ def command_broad_qc(cfg: dict) -> None:
     labels = pd.DataFrame(label_rows)
     mapping = {
         "background_noise": [
-            "qadd_nonspeech_level_dbfs",
-            "qadd_snr_proxy_db",
-            "qadd_nonspeech_variability_db",
-            "qadd_hum_prominence_db",
-            "qadd_transient_rate_per_min",
+            "qadd_pause_ac_level_dbfs_median",
+            "qadd_pause_level_iqr_db",
+            "qadd_speech_pause_level_contrast_db",
+            "qadd_pause_spectral_flatness",
+            "qadd_mains_hum_comb_score_db",
         ],
         "volume_instability": [
-            "qgain_level_iqr_db",
-            "qgain_segment_sd_db",
+            "qgain_within_segment_iqr_db",
+            "qgain_between_segment_mad_db",
             "qgain_abs_drift_db_per_min",
         ],
         "poor_audio_quality": [
-            "qadd_snr_proxy_db",
-            "qgain_level_iqr_db",
-            "qrev_tail_excess_db",
-            "qdist_hard_clip_sample_fraction",
-            "qtemp_zero_dropout_rate_per_min",
+            "qadd_speech_pause_level_contrast_db",
+            "qgain_within_segment_iqr_db",
+            "qrev_tail_excess_100ms_db",
+            "qdist_hard_clipped_sample_fraction",
         ],
         "another_person_speaks": [
-            "qadd_nonspeech_level_dbfs",
-            "qadd_snr_proxy_db",
-            "qadd_transient_rate_per_min",
+            "qadd_pause_ac_level_dbfs_median",
+            "qadd_speech_pause_level_contrast_db",
         ],
     }
+    _, reviewed_registry = load_latest_feature_release(cfg["_project_root"])
     links = perceptual_links(
         data,
         labels,
         mapping,
         bootstrap_replicates=cfg["analysis"]["bootstrap_replicates"],
         seed=cfg["project"]["random_seed"],
+        registry_frame=reviewed_registry,
     )
     prevalence = (
         labels.groupby("category")["consensus_rating"]
@@ -2976,10 +2942,12 @@ def command_describe(cfg: dict) -> None:
     output = root / "04_analysis" / "descriptive"
     features = _read_existing(root / "03_dataset_assembly", "paper1_analysis_dataset")
     features = features.loc[features["primary_measurement_eligible"].fillna(False)].copy()
+    _, reviewed_registry = load_latest_feature_release(cfg["_project_root"])
     summary = describe_metrics(
         features,
         bootstrap_replicates=cfg["analysis"]["bootstrap_replicates"],
         seed=cfg["project"]["random_seed"],
+        registry_frame=reviewed_registry,
     )
     _write_table(summary, output / "metric_descriptive_statistics")
     correlations = pairwise_clustered_spearman(
@@ -2987,17 +2955,20 @@ def command_describe(cfg: dict) -> None:
         minimum_participants=cfg["analysis"]["minimum_complete_participants"],
         bootstrap_replicates=min(500, cfg["analysis"]["bootstrap_replicates"]),
         seed=cfg["project"]["random_seed"],
+        registry_frame=reviewed_registry,
     )
     _write_table(correlations, output / "pairwise_clustered_spearman")
     persistence = participant_persistence(
         features,
         minimum_participants=cfg["analysis"]["minimum_complete_participants"],
+        registry_frame=reviewed_registry,
     )
     _write_table(persistence, output / "participant_persistence_not_reliability")
     contrasts = participant_level_group_contrasts(
         features,
         bootstrap_replicates=cfg["analysis"]["bootstrap_replicates"],
         seed=cfg["project"]["random_seed"],
+        registry_frame=reviewed_registry,
     )
     _write_table(contrasts, output / "exploratory_participant_level_diagnosis_contrasts")
     write_run_manifest(
@@ -3013,7 +2984,7 @@ def command_sensitivity(cfg: dict) -> None:
     feature_root = root / "02_features"
     output = root / "04_analysis" / "sensitivity"
     primary = _read_existing(feature_root, "bamboo_q_metrics")
-    registry = metric_registry_frame()
+    legacy_registry = metric_registry_frame()
     rows = []
     for profile in cfg["vad"].get("sensitivity_profiles", {}):
         comparison = _read_existing(feature_root, f"bamboo_q_metrics_{profile}")
@@ -3025,7 +2996,7 @@ def command_sensitivity(cfg: dict) -> None:
             indicator=True,
             validate="one_to_one",
         )
-        for feature in registry["feature"]:
+        for feature in legacy_registry["feature"]:
             left_column = f"{feature}_primary"
             right_column = f"{feature}_{profile}"
             if left_column not in joined or right_column not in joined:
@@ -3043,15 +3014,20 @@ def command_sensitivity(cfg: dict) -> None:
             rows.append(
                 {
                     "profile": profile,
+                    "measurement_layer": "legacy_profile_diagnostic_not_reviewed_release",
                     "feature": feature,
                     "n_primary": int(left.notna().sum()),
                     "n_sensitivity": int(right.notna().sum()),
                     "n_complete_pair": int(complete.sum()),
                     "spearman_rho": rho,
-                    "median_signed_difference_sensitivity_minus_primary": float((right[complete] - left[complete]).median())
+                    "median_signed_difference_sensitivity_minus_primary": float(
+                        (right[complete] - left[complete]).median()
+                    )
                     if complete.any()
                     else float("nan"),
-                    "median_absolute_difference": float((right[complete] - left[complete]).abs().median())
+                    "median_absolute_difference": float(
+                        (right[complete] - left[complete]).abs().median()
+                    )
                     if complete.any()
                     else float("nan"),
                     "primary_only_recordings": int((joined["_merge"] == "left_only").sum()),
@@ -3061,6 +3037,7 @@ def command_sensitivity(cfg: dict) -> None:
     _write_table(pd.DataFrame(rows), output / "segmentation_profile_robustness")
     assembled = _read_existing(root / "03_dataset_assembly", "paper1_analysis_dataset")
     assembled = assembled.loc[assembled["primary_measurement_eligible"].fillna(False)].copy()
+    _, reviewed_registry = load_latest_feature_release(cfg["_project_root"])
     one_per_participant = one_recording_per_participant(
         assembled, seed=cfg["analysis"]["one_recording_per_participant_seed"]
     )
@@ -3072,11 +3049,13 @@ def command_sensitivity(cfg: dict) -> None:
         assembled,
         bootstrap_replicates=cfg["analysis"]["bootstrap_replicates"],
         seed=cfg["project"]["random_seed"],
+        registry_frame=reviewed_registry,
     ).add_suffix("_full")
     one_summary = describe_metrics(
         one_per_participant,
         bootstrap_replicates=cfg["analysis"]["bootstrap_replicates"],
         seed=cfg["project"]["random_seed"],
+        registry_frame=reviewed_registry,
     ).add_suffix("_one_per_participant")
     comparison = full_summary.merge(
         one_summary,
@@ -3103,7 +3082,9 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("audit", help="Audit and reconcile all metadata workbooks")
     inventory = subparsers.add_parser("inventory", help="Probe and reconcile all media files")
-    inventory.add_argument("--no-hashes", action="store_true", help="Skip SHA-256 only for a fast dry run")
+    inventory.add_argument(
+        "--no-hashes", action="store_true", help="Skip SHA-256 only for a fast dry run"
+    )
     subparsers.add_parser(
         "freeze-template",
         help="Create the local diagnosis-adjudication template without overwriting it",
@@ -3112,7 +3093,9 @@ def build_parser() -> argparse.ArgumentParser:
         "freeze",
         help="Create an immutable, versioned cohort freeze after audit and inventory",
     )
-    subparsers.add_parser("segment", help="Run version-pinned Silero and create distinct segmentation views")
+    subparsers.add_parser(
+        "segment", help="Run version-pinned Silero and create distinct segmentation views"
+    )
     subparsers.add_parser(
         "segment-template",
         help="Create/refresh the mandatory segmentation review and manual-boundary tables",
@@ -3121,13 +3104,29 @@ def build_parser() -> argparse.ArgumentParser:
         "segment-adjudicate",
         help="Validate review decisions/manual boundaries and freeze final intervals",
     )
-    extract = subparsers.add_parser("extract", help="Extract registered Q metrics from native and VAD audio views")
-    extract.add_argument("--profile", default="primary", help="primary, conservative, or permissive")
-    subparsers.add_parser("assemble", help="Merge audited metadata and metrics with explicit eligibility gates")
-    subparsers.add_parser("rest-reference", help="Extract exact-session Rest context without speech VAD")
-    subparsers.add_parser("encoding-sensitivity", help="Re-extract paired WAV/WEBM technical replicates")
+    extract = subparsers.add_parser(
+        "extract", help="Extract registered Q metrics from native and VAD audio views"
+    )
+    extract.add_argument(
+        "--profile", default="primary", help="primary, conservative, or permissive"
+    )
+    subparsers.add_parser(
+        "reviewed-release",
+        help="Build the canonical latest release from approved reviewed feature tables",
+    )
+    subparsers.add_parser(
+        "assemble", help="Merge audited metadata and metrics with explicit eligibility gates"
+    )
+    subparsers.add_parser(
+        "rest-reference", help="Extract exact-session Rest context without speech VAD"
+    )
+    subparsers.add_parser(
+        "encoding-sensitivity", help="Re-extract paired WAV/WEBM technical replicates"
+    )
     subparsers.add_parser("describe", help="Participant-clustered descriptive inference")
-    subparsers.add_parser("sensitivity", help="Compare conservative/permissive segmentation profiles")
+    subparsers.add_parser(
+        "sensitivity", help="Compare conservative/permissive segmentation profiles"
+    )
     subparsers.add_parser(
         "broad-qc",
         help="Legacy analysis of merged broad metadata QC; Goal 4 is run by human-qc",
@@ -3155,6 +3154,7 @@ def main(argv: list[str] | None = None) -> int:
         "segment-template": lambda: command_segment_template(cfg),
         "segment-adjudicate": lambda: command_segment_adjudicate(cfg),
         "extract": lambda: command_extract(cfg, profile=args.profile),
+        "reviewed-release": lambda: command_reviewed_release(cfg),
         "assemble": lambda: command_assemble(cfg),
         "rest-reference": lambda: command_rest_reference(cfg),
         "encoding-sensitivity": lambda: command_encoding_sensitivity(cfg),
@@ -3166,7 +3166,10 @@ def main(argv: list[str] | None = None) -> int:
     try:
         commands[args.command]()
     except Exception as exc:
-        print(json.dumps({"status": "failed", "command": args.command, "error": repr(exc)}, indent=2), file=sys.stderr)
+        print(
+            json.dumps({"status": "failed", "command": args.command, "error": repr(exc)}, indent=2),
+            file=sys.stderr,
+        )
         return 1
     return 0
 

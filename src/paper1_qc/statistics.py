@@ -9,6 +9,10 @@ from scipy import stats
 from .registry import metric_registry_frame
 
 
+def _registry(registry_frame: pd.DataFrame | None) -> pd.DataFrame:
+    return metric_registry_frame() if registry_frame is None else registry_frame.copy()
+
+
 def _roc_auc(y_true: pd.Series, scores: pd.Series) -> float:
     y = pd.to_numeric(y_true, errors="coerce").to_numpy()
     score = pd.to_numeric(scores, errors="coerce").to_numpy()
@@ -43,7 +47,10 @@ def cluster_bootstrap(
     estimates = []
     for _ in range(replicates):
         sampled = rng.choice(clusters, size=len(clusters), replace=True)
-        pieces = [grouped[cluster].assign(_bootstrap_cluster=index) for index, cluster in enumerate(sampled)]
+        pieces = [
+            grouped[cluster].assign(_bootstrap_cluster=index)
+            for index, cluster in enumerate(sampled)
+        ]
         estimate = statistic(pd.concat(pieces, ignore_index=True))
         if np.isfinite(estimate):
             estimates.append(float(estimate))
@@ -59,9 +66,10 @@ def describe_metrics(
     subject_col: str = "SubjectID",
     bootstrap_replicates: int = 2000,
     seed: int = 20260713,
+    registry_frame: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     rows = []
-    registry = metric_registry_frame()
+    registry = _registry(registry_frame)
     for _, spec in registry.iterrows():
         feature = spec["feature"]
         if feature not in frame:
@@ -87,7 +95,9 @@ def describe_metrics(
                 "median": median,
                 "q25": float(values.quantile(0.25)),
                 "q75": float(values.quantile(0.75)),
-                "zero_fraction_nonmissing": float((values.dropna() == 0).mean()) if values.notna().any() else np.nan,
+                "zero_fraction_nonmissing": float((values.dropna() == 0).mean())
+                if values.notna().any()
+                else np.nan,
                 "median_cluster_bootstrap_ci_low": low,
                 "median_cluster_bootstrap_ci_high": high,
                 "bootstrap_successful": successful,
@@ -104,12 +114,13 @@ def pairwise_clustered_spearman(
     minimum_participants: int = 20,
     bootstrap_replicates: int = 500,
     seed: int = 20260713,
+    registry_frame: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Pairwise Spearman structure with participant-clustered confidence intervals."""
     if features is None:
-        registry = metric_registry_frame()
+        registry = _registry(registry_frame)
         features = registry.loc[registry["role"].str.startswith("primary"), "feature"].tolist()
-    registry = metric_registry_frame().set_index("feature")
+    registry = _registry(registry_frame).set_index("feature")
     rows = []
     pair_index = 0
     for left_index, left in enumerate(features[:-1]):
@@ -117,12 +128,20 @@ def pairwise_clustered_spearman(
             pair_index += 1
             if left not in frame or right not in frame:
                 continue
-            work = frame[[subject_col]].assign(
-                left=pd.to_numeric(frame[left], errors="coerce"),
-                right=pd.to_numeric(frame[right], errors="coerce"),
-            ).dropna()
+            work = (
+                frame[[subject_col]]
+                .assign(
+                    left=pd.to_numeric(frame[left], errors="coerce"),
+                    right=pd.to_numeric(frame[right], errors="coerce"),
+                )
+                .dropna()
+            )
             participants = work[subject_col].nunique()
-            if participants < minimum_participants or work["left"].nunique() < 3 or work["right"].nunique() < 3:
+            if (
+                participants < minimum_participants
+                or work["left"].nunique() < 3
+                or work["right"].nunique() < 3
+            ):
                 rows.append(
                     {
                         "feature_left": left,
@@ -136,7 +155,9 @@ def pairwise_clustered_spearman(
                     }
                 )
                 continue
-            statistic = lambda sample: float(stats.spearmanr(sample["left"], sample["right"]).statistic)
+            statistic = lambda sample: float(
+                stats.spearmanr(sample["left"], sample["right"]).statistic
+            )
             rho = statistic(work)
             low, high, successful = cluster_bootstrap(
                 work,
@@ -150,7 +171,9 @@ def pairwise_clustered_spearman(
                     "feature_left": left,
                     "family_left": registry.loc[left, "family"] if left in registry.index else None,
                     "feature_right": right,
-                    "family_right": registry.loc[right, "family"] if right in registry.index else None,
+                    "family_right": registry.loc[right, "family"]
+                    if right in registry.index
+                    else None,
                     "n_recordings": len(work),
                     "n_participants": participants,
                     "rho": rho,
@@ -182,6 +205,7 @@ def participant_persistence(
     features: list[str] | None = None,
     minimum_participants: int = 20,
     minimum_repeated_participants: int = 10,
+    registry_frame: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Random-intercept variance partition, explicitly labeled persistence—not reliability.
 
@@ -193,13 +217,15 @@ def participant_persistence(
     except ImportError as exc:
         raise ImportError("participant_persistence requires statsmodels") from exc
     if features is None:
-        registry = metric_registry_frame()
+        registry = _registry(registry_frame)
         features = registry.loc[registry["role"].str.startswith("primary"), "feature"].tolist()
     rows = []
     for feature in features:
         if feature not in frame:
             continue
-        work = frame[[subject_col]].assign(raw=pd.to_numeric(frame[feature], errors="coerce")).dropna()
+        work = (
+            frame[[subject_col]].assign(raw=pd.to_numeric(frame[feature], errors="coerce")).dropna()
+        )
         counts = work.groupby(subject_col).size()
         zero_fraction = float((work["raw"] == 0).mean()) if len(work) else np.nan
         base = {
@@ -266,6 +292,7 @@ def participant_level_group_contrasts(
     bootstrap_replicates: int = 2000,
     seed: int = 20260713,
     minimum_per_group: int = 10,
+    registry_frame: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Participant-level exploratory contrasts robust to unequal recording/group counts.
 
@@ -273,15 +300,21 @@ def participant_level_group_contrasts(
     group, so the larger ALS group cannot dominate uncertainty through extra recordings.
     """
     if features is None:
-        registry_frame = metric_registry_frame()
-        features = registry_frame.loc[registry_frame["role"].str.startswith("primary"), "feature"].tolist()
-    registry = metric_registry_frame().set_index("feature")
+        active_registry = _registry(registry_frame)
+        features = active_registry.loc[
+            active_registry["role"].str.startswith("primary"), "feature"
+        ].tolist()
+    registry = _registry(registry_frame).set_index("feature")
     rng = np.random.default_rng(seed)
     rows = []
     for feature in features:
         if feature not in frame:
             continue
-        work = frame[[subject_col, group_col]].assign(value=pd.to_numeric(frame[feature], errors="coerce")).dropna()
+        work = (
+            frame[[subject_col, group_col]]
+            .assign(value=pd.to_numeric(frame[feature], errors="coerce"))
+            .dropna()
+        )
         group_conflicts = work.groupby(subject_col)[group_col].nunique()
         work = work.loc[~work[subject_col].isin(group_conflicts[group_conflicts > 1].index)]
         participant = work.groupby([subject_col, group_col], as_index=False)["value"].median()
@@ -310,7 +343,9 @@ def participant_level_group_contrasts(
         def effects(left: np.ndarray, right: np.ndarray) -> tuple[float, float]:
             median_difference = float(np.median(left) - np.median(right))
             comparisons = left[:, None] - right[None, :]
-            cliffs_delta = float((np.sum(comparisons > 0) - np.sum(comparisons < 0)) / comparisons.size)
+            cliffs_delta = float(
+                (np.sum(comparisons > 0) - np.sum(comparisons < 0)) / comparisons.size
+            )
             return median_difference, cliffs_delta
 
         median_difference, cliffs_delta = effects(a, b)
@@ -344,9 +379,10 @@ def perceptual_links(
     file_col: str = "file_name",
     bootstrap_replicates: int = 2000,
     seed: int = 20260713,
+    registry_frame: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Category-specific links with participant-clustered uncertainty and no resampling/SMOTE."""
-    registry = metric_registry_frame().set_index("feature")
+    registry = _registry(registry_frame).set_index("feature")
     merged = features.merge(consensus, on=file_col, how="inner", validate="one_to_many")
     rows = []
     for category, metrics in category_metric_map.items():
@@ -383,6 +419,10 @@ def perceptual_links(
                     rows.append(row)
                     continue
                 direction = registry.loc[feature, "worse"]
+                if direction not in {"higher", "lower"}:
+                    row["reason"] = "feature_has_no_validated_worse_direction"
+                    rows.append(row)
+                    continue
                 oriented = -work["x"] if direction == "lower" else work["x"]
                 work = work.assign(oriented=oriented)
                 statistic = lambda sample: float(_roc_auc(sample["y"], sample["oriented"]))
@@ -394,9 +434,13 @@ def perceptual_links(
                     replicates=bootstrap_replicates,
                     seed=seed,
                 )
-                row.update(effect_type="roc_auc", effect=effect, ci_low=low, ci_high=high, estimable=True)
+                row.update(
+                    effect_type="roc_auc", effect=effect, ci_low=low, ci_high=high, estimable=True
+                )
             elif len(unique_y) >= 3:
-                statistic = lambda sample: float(stats.spearmanr(sample["x"], sample["y"]).statistic)
+                statistic = lambda sample: float(
+                    stats.spearmanr(sample["x"], sample["y"]).statistic
+                )
                 effect = statistic(work)
                 low, high, _ = cluster_bootstrap(
                     work,
@@ -405,7 +449,13 @@ def perceptual_links(
                     replicates=bootstrap_replicates,
                     seed=seed,
                 )
-                row.update(effect_type="spearman_rho", effect=effect, ci_low=low, ci_high=high, estimable=True)
+                row.update(
+                    effect_type="spearman_rho",
+                    effect=effect,
+                    ci_low=low,
+                    ci_high=high,
+                    estimable=True,
+                )
             else:
                 row["reason"] = "outcome_has_fewer_than_2_levels"
             rows.append(row)
@@ -431,6 +481,7 @@ def direction_oriented_family_indices(
     *,
     id_columns: tuple[str, ...] = ("file_name", "SubjectID"),
     minimum_fraction_metrics: float = 0.5,
+    registry_frame: pd.DataFrame | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Create analysis-specific family indices whose larger values always mean worse.
 
@@ -442,7 +493,7 @@ def direction_oriented_family_indices(
     """
     if not 0 < minimum_fraction_metrics <= 1:
         raise ValueError("minimum_fraction_metrics must be in (0, 1]")
-    registry = metric_registry_frame()
+    registry = _registry(registry_frame)
     eligible = registry.loc[
         registry["worse"].isin(["higher", "lower"])
         & registry["role"].str.startswith("primary")
@@ -473,8 +524,8 @@ def direction_oriented_family_indices(
             )
         minimum_metrics = max(1, int(np.ceil(len(oriented_columns) * minimum_fraction_metrics)))
         support = output[oriented_columns].notna().sum(axis=1)
-        output[f"qfamily__{family}"] = output[oriented_columns].median(axis=1, skipna=True).where(
-            support >= minimum_metrics
+        output[f"qfamily__{family}"] = (
+            output[oriented_columns].median(axis=1, skipna=True).where(support >= minimum_metrics)
         )
         output[f"qfamily_n_metrics__{family}"] = support
         output[f"qfamily_required_metrics__{family}"] = minimum_metrics
@@ -519,9 +570,7 @@ def family_alignment_matrix(
     human labels are oriented so larger values mean more artifact burden.
     """
     family_column = "category" if "category" in labels.columns else "family"
-    rating_column = (
-        "consensus_rating" if "consensus_rating" in labels.columns else "rating"
-    )
+    rating_column = "consensus_rating" if "consensus_rating" in labels.columns else "rating"
     merged = family_indices.merge(
         labels[[file_col, family_column, rating_column]],
         on=file_col,
@@ -539,9 +588,11 @@ def family_alignment_matrix(
         y = pd.to_numeric(human_frame[rating_column], errors="coerce")
         for objective_family, score_column in objective_columns.items():
             pair_number += 1
-            work = human_frame[[subject_col]].assign(
-                y=y, score=pd.to_numeric(human_frame[score_column], errors="coerce")
-            ).dropna()
+            work = (
+                human_frame[[subject_col]]
+                .assign(y=y, score=pd.to_numeric(human_frame[score_column], errors="coerce"))
+                .dropna()
+            )
             levels = sorted(work["y"].unique())
             counts = work["y"].value_counts()
             row = {
@@ -576,9 +627,7 @@ def family_alignment_matrix(
                 row["reason"] = "under_supported_human_class"
             elif len(levels) == 2:
                 auc = float(_roc_auc(work["y"], work["score"]))
-                statistic = lambda sample: float(
-                    2 * _roc_auc(sample["y"], sample["score"]) - 1
-                )
+                statistic = lambda sample: float(2 * _roc_auc(sample["y"], sample["score"]) - 1)
                 effect = statistic(work)
                 low, high, _ = cluster_bootstrap(
                     work,
@@ -690,9 +739,7 @@ def rater_stratified_family_alignment(
     for human_family, human_frame in merged.groupby(family_column, sort=True):
         for objective_family, score_column in objective_columns.items():
             pair_number += 1
-            work = human_frame[
-                [subject_col, rater_col, rating_column, score_column]
-            ].copy()
+            work = human_frame[[subject_col, rater_col, rating_column, score_column]].copy()
             work[rating_column] = pd.to_numeric(work[rating_column], errors="coerce")
             work[score_column] = pd.to_numeric(work[score_column], errors="coerce")
             work = work.dropna()
@@ -716,9 +763,7 @@ def rater_stratified_family_alignment(
                 else np.nan
             )
             supported_participants = work[subject_col].nunique() >= minimum_participants
-            estimable = bool(
-                np.isfinite(effect) and successful > 0 and supported_participants
-            )
+            estimable = bool(np.isfinite(effect) and successful > 0 and supported_participants)
             rows.append(
                 {
                     "label_system": label_system,
@@ -768,9 +813,7 @@ def matched_family_specificity(
 ) -> pd.DataFrame:
     """Test whether matched family effects exceed off-diagonal family effects."""
     family_column = "category" if "category" in labels.columns else "family"
-    rating_column = (
-        "consensus_rating" if "consensus_rating" in labels.columns else "rating"
-    )
+    rating_column = "consensus_rating" if "consensus_rating" in labels.columns else "rating"
     merged = family_indices.merge(
         labels[[file_col, family_column, rating_column]],
         on=file_col,
@@ -805,11 +848,7 @@ def matched_family_specificity(
         return matched, mismatched
 
     matched, mismatched = effects(merged)
-    point = (
-        float(np.mean(matched) - np.mean(mismatched))
-        if matched and mismatched
-        else np.nan
-    )
+    point = float(np.mean(matched) - np.mean(mismatched)) if matched and mismatched else np.nan
 
     def statistic(sample: pd.DataFrame) -> float:
         bootstrap_matched, bootstrap_mismatched = effects(sample)
@@ -829,9 +868,7 @@ def matched_family_specificity(
             {
                 "label_system": label_system,
                 "mean_matched_effect": float(np.mean(matched)) if matched else np.nan,
-                "mean_mismatched_effect": (
-                    float(np.mean(mismatched)) if mismatched else np.nan
-                ),
+                "mean_mismatched_effect": (float(np.mean(mismatched)) if mismatched else np.nan),
                 "matched_minus_mismatched": point,
                 "ci_low": low,
                 "ci_high": high,
@@ -870,18 +907,16 @@ def compare_binary_label_systems(
     difference favors label system A. This does not correct for unavailable rater
     reliability and must not be described as an intrinsic ranking of annotation systems.
     """
+
     def wide(labels: pd.DataFrame, prefix: str) -> pd.DataFrame:
         family_column = "category" if "category" in labels.columns else "family"
-        rating_column = (
-            "consensus_rating" if "consensus_rating" in labels.columns else "rating"
-        )
+        rating_column = "consensus_rating" if "consensus_rating" in labels.columns else "rating"
         subset = labels.loc[labels[family_column].isin(shared_families)]
         result = subset.pivot(index=file_col, columns=family_column, values=rating_column)
         return result.add_prefix(prefix).reset_index()
 
-    merged = (
-        family_indices.merge(wide(labels_a, "a__"), on=file_col, how="inner")
-        .merge(wide(labels_b, "b__"), on=file_col, how="inner")
+    merged = family_indices.merge(wide(labels_a, "a__"), on=file_col, how="inner").merge(
+        wide(labels_b, "b__"), on=file_col, how="inner"
     )
     rows = []
     for index, family in enumerate(shared_families):
@@ -898,11 +933,15 @@ def compare_binary_label_systems(
                 }
             )
             continue
-        work = merged[[subject_col]].assign(
-            score=pd.to_numeric(merged[score_column], errors="coerce"),
-            a=pd.to_numeric(merged[a_column], errors="coerce"),
-            b=pd.to_numeric(merged[b_column], errors="coerce"),
-        ).dropna()
+        work = (
+            merged[[subject_col]]
+            .assign(
+                score=pd.to_numeric(merged[score_column], errors="coerce"),
+                a=pd.to_numeric(merged[a_column], errors="coerce"),
+                b=pd.to_numeric(merged[b_column], errors="coerce"),
+            )
+            .dropna()
+        )
         a_counts = work["a"].value_counts()
         b_counts = work["b"].value_counts()
         row = {
@@ -935,8 +974,7 @@ def compare_binary_label_systems(
         auc_a = float(_roc_auc(work["a"], work["score"]))
         auc_b = float(_roc_auc(work["b"], work["score"]))
         statistic = lambda sample: float(
-            _roc_auc(sample["a"], sample["score"])
-            - _roc_auc(sample["b"], sample["score"])
+            _roc_auc(sample["a"], sample["score"]) - _roc_auc(sample["b"], sample["score"])
         )
         low, high, successful = cluster_bootstrap(
             work,
