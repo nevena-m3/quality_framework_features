@@ -18,7 +18,7 @@ The finalization module requires the completed R3 cohort candidate and verifies:
 
 ## Finalization actions
 
-1. Copy the completed candidate to `outputs/reviewed/channel_device/qchan-v4.0.0`.
+1. Copy the completed candidate to `MAIN outputs/02_FEATURE_REVIEWED/00_working_candidates/channel_device/qchan-v4.0.0`.
 2. Remove transient `_archive` content from the final candidate.
 3. Verify exact equality for the four analysis features and three signed precursors.
 4. Write final G10 feature decisions, the ten-domain dashboard, final gate summary, and the resolved 50-item checklist.
@@ -51,6 +51,6 @@ The finalization tests verify feature roles, no-scalar governance, dashboard str
 
 ## Atomic freezes
 
-`freeze_qchan_v400.ps1` validates the accepted final candidate and executed notebook, stages a complete copy, writes a hash inventory and freeze manifest, and atomically moves the sealed directory into `MAIN outputs/reviewed/06_family_freezes/channel_device/qchan-v4.0.0`.
+`freeze_qchan_v400.ps1` validates the accepted final candidate and executed notebook, stages a complete copy, writes a hash inventory and freeze manifest, and atomically moves the sealed directory into `MAIN outputs/02_FEATURE_REVIEWED/06_family_freezes/channel_device/qchan-v4.0.0`.
 
-`freeze_qchan_figure_package_v100.ps1` validates the frozen measurement, copies the 22 figure/example bundles and final scientific documentation, writes a second independent hash inventory and manifest, and atomically moves the package into `MAIN outputs/reviewed/07_figure_packages/channel_device/qchan-v4.0.0-figures-v1.0.0`.
+`freeze_qchan_figure_package_v100.ps1` validates the frozen measurement, copies the 22 figure/example bundles and final scientific documentation, writes a second independent hash inventory and manifest, and atomically moves the package into `MAIN outputs/02_FEATURE_REVIEWED/07_figure_packages/channel_device/qchan-v4.0.0-figures-v1.0.0`.

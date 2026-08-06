@@ -569,12 +569,12 @@ def main() -> None:
     parser.add_argument("--project-root", type=Path, required=True)
     args = parser.parse_args()
     project_root = args.project_root.resolve()
-    source = project_root / "outputs/reviewed" / "06_QTEMP" / SOURCE_VERSION
+    source = project_root / "MAIN outputs/02_FEATURE_REVIEWED/00_working_candidates" / "temporal_discontinuity" / SOURCE_VERSION
     if not source.exists():
         raise FileNotFoundError(f"Run the QTEMP candidate validation first. Missing: {source}")
     source_manifest_entries = verify_manifest(source)
 
-    parent = project_root / "outputs/reviewed" / "06_QTEMP"
+    parent = project_root / "MAIN outputs/02_FEATURE_REVIEWED/00_working_candidates" / "temporal_discontinuity"
     parent.mkdir(parents=True, exist_ok=True)
     final = parent / FINAL_VERSION
     temporary = Path(tempfile.mkdtemp(prefix="qtemp_final_", dir=str(parent)))

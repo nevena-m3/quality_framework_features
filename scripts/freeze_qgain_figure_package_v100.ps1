@@ -6,9 +6,9 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$MeasurementFreeze = Join-Path $ProjectRoot "MAIN outputs\reviewed\06_family_freezes\gain_dynamics\qgain-v4.1.0"
-$Candidate = Join-Path $ProjectRoot "outputs\reviewed\gain_dynamics\qgain-v4.1.0-figures-v1.0.0-candidate"
-$FinalParent = Join-Path $ProjectRoot "MAIN outputs\reviewed\07_figure_packages\gain_dynamics"
+$MeasurementFreeze = Join-Path $ProjectRoot "MAIN outputs\02_FEATURE_REVIEWED\06_family_freezes\gain_dynamics\qgain-v4.1.0"
+$Candidate = Join-Path $ProjectRoot "MAIN outputs\02_FEATURE_REVIEWED\00_working_candidates\gain_dynamics\qgain-v4.1.0-figures-v1.0.0-candidate"
+$FinalParent = Join-Path $ProjectRoot "MAIN outputs\02_FEATURE_REVIEWED\07_figure_packages\gain_dynamics"
 $Final = Join-Path $FinalParent "qgain-v4.1.0-figures-v1.0.0"
 $Staging = Join-Path $FinalParent "qgain-v4.1.0-figures-v1.0.0.__staging__"
 $Notebook = Join-Path $ProjectRoot "notebooks\02_feature_extraction\01_QGAIN\02_figures_executed.ipynb"
@@ -128,7 +128,7 @@ $FinalManifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $FinalManife
 
 Move-Item -LiteralPath $Staging -Destination $Final
 
-$PublishRoot = Join-Path $ProjectRoot "MAIN outputs\reviewed\08_validation_workbooks"
+$PublishRoot = Join-Path $ProjectRoot "MAIN outputs\02_FEATURE_REVIEWED\08_validation_workbooks"
 New-Item -ItemType Directory -Path $PublishRoot -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $Final "docs\QGAIN_Family_Evaluation_Workbook_v1_0.docx") -Destination (Join-Path $PublishRoot "QGAIN_Family_Evaluation_Workbook_v1_0.docx") -Force
 Copy-Item -LiteralPath (Join-Path $Final "tables\QGAIN_Validation_Checklist_v1_0.csv") -Destination (Join-Path $PublishRoot "QGAIN_Validation_Checklist_v1_0.csv") -Force

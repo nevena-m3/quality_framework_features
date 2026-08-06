@@ -71,11 +71,11 @@ class CohortPaths:
                 "nonlinear_distortion" / LEGACY_MEASUREMENT_VERSION
             ),
             preflight_root=(
-                root / "outputs/reviewed" / "nonlinear_distortion" /
+                root / "MAIN outputs/02_FEATURE_REVIEWED/00_working_candidates" / "nonlinear_distortion" /
                 MEASUREMENT_VERSION
             ),
             output_root=(
-                root / "outputs/reviewed" / "nonlinear_distortion" /
+                root / "MAIN outputs/02_FEATURE_REVIEWED/00_working_candidates" / "nonlinear_distortion" /
                 MEASUREMENT_VERSION
             ),
         )

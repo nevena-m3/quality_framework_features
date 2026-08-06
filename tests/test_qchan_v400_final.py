@@ -143,7 +143,7 @@ def test_completed_candidate_has_22_applicable_figure_bundles() -> None:
     project_root = Path(__file__).resolve().parents[1]
     candidate = (
         project_root
-        / "outputs/reviewed"
+        / "MAIN outputs/02_FEATURE_REVIEWED/00_working_candidates"
         / "channel_device"
         / "qchan-v4.0.0-candidate"
     )

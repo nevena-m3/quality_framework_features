@@ -12,13 +12,13 @@ EXPECTED_FIGURE_COUNT = 32
 def _find_project_root() -> Path:
     start = Path.cwd().resolve()
     for candidate in [start, *start.parents]:
-        if (candidate / "MAIN outputs/reviewed").exists() and (candidate / "outputs/reviewed").exists():
+        if (candidate / "MAIN outputs/02_FEATURE_REVIEWED").exists() and (candidate / "MAIN outputs/02_FEATURE_REVIEWED/00_working_candidates").exists():
             return candidate
     raise RuntimeError("Could not locate project root")
 
 
 def _candidate_root() -> Path:
-    return _find_project_root() / "outputs/reviewed" / "gain_dynamics" / "qgain-v4.1.0-figures-v1.0.0-candidate"
+    return _find_project_root() / "MAIN outputs/02_FEATURE_REVIEWED/00_working_candidates" / "gain_dynamics" / "qgain-v4.1.0-figures-v1.0.0-candidate"
 
 
 def test_candidate_manifest_and_source_freeze_contract():
@@ -57,7 +57,7 @@ def test_completed_workbook_and_checklists_are_attached():
 
 def test_no_measurement_values_are_recomputed_or_overwritten():
     project = _find_project_root()
-    freeze_manifest = json.loads((project / "MAIN outputs/reviewed" / "06_family_freezes" / "gain_dynamics" / "qgain-v4.1.0" / "manifests" / "qgain_v410_freeze_manifest.json").read_text(encoding="utf-8"))
+    freeze_manifest = json.loads((project / "MAIN outputs/02_FEATURE_REVIEWED" / "06_family_freezes" / "gain_dynamics" / "qgain-v4.1.0" / "manifests" / "qgain_v410_freeze_manifest.json").read_text(encoding="utf-8"))
     candidate_manifest = json.loads((_candidate_root() / "manifests" / "qgain_v410_figure_package_manifest.json").read_text(encoding="utf-8"))
     assert candidate_manifest["source_freeze_inventory_sha256"] == freeze_manifest["freeze_inventory_sha256"]
     assert candidate_manifest["source_executed_notebook_sha256"] == freeze_manifest["executed_notebook_sha256"]

@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 
 $ProjectRoot = (Resolve-Path -LiteralPath $ProjectRoot).Path
 $Python = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
-$Candidate = Join-Path $ProjectRoot "outputs\reviewed\gain_dynamics\qgain-v4.1.0-candidate"
+$Candidate = Join-Path $ProjectRoot "MAIN outputs\02_FEATURE_REVIEWED\00_working_candidates\gain_dynamics\qgain-v4.1.0-candidate"
 $NotebookDir = Join-Path $ProjectRoot "notebooks\02_feature_extraction\01_QGAIN"
 $Module = Join-Path $ProjectRoot "src\paper1_qc_reviewed\qgain_v410.py"
 $Tests = Join-Path $ProjectRoot "tests\test_qgain_v410.py"
@@ -105,13 +105,13 @@ finally {
     Pop-Location
 }
 
-$FreezeParent = Join-Path $ProjectRoot "MAIN outputs\reviewed\06_family_freezes\gain_dynamics"
+$FreezeParent = Join-Path $ProjectRoot "MAIN outputs\02_FEATURE_REVIEWED\06_family_freezes\gain_dynamics"
 $FreezeTarget = Join-Path $FreezeParent "qgain-v4.1.0"
 if (Test-Path -LiteralPath $FreezeTarget) {
     throw "Refusing to overwrite immutable QGAIN freeze: $FreezeTarget"
 }
 
-$MainReviewed = Join-Path $ProjectRoot "MAIN outputs/reviewed"
+$MainReviewed = Join-Path $ProjectRoot "MAIN outputs/02_FEATURE_REVIEWED"
 $CanonicalDestinations = @(
     "01_analysis_features\qgain_v410_analysis_features.csv",
     "01_analysis_features\qgain_v410_analysis_features.parquet",
@@ -261,4 +261,4 @@ Copy-Item -LiteralPath $PassportSource -Destination $PassportDestination -Recurs
 Write-Host ""
 Write-Host "QGAIN v4.1.0 FROZEN SUCCESSFULLY" -ForegroundColor Green
 Write-Host "Freeze: $FreezeTarget" -ForegroundColor Cyan
-Write-Host "Canonical reviewed outputs were published under MAIN outputs/reviewed." -ForegroundColor Cyan
+Write-Host "Canonical reviewed outputs were published under MAIN outputs/02_FEATURE_REVIEWED." -ForegroundColor Cyan

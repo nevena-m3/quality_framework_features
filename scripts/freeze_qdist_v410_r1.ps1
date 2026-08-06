@@ -75,7 +75,7 @@ Write-Host "QDIST v4.1.0 MEASUREMENT FROZEN SUCCESSFULLY" -ForegroundColor Green
 Write-Host (
     "Freeze: " +
     (Join-Path $ProjectRoot `
-        "MAIN outputs\reviewed\06_family_freezes\nonlinear_distortion\qdist-v4.1.0")
+        "MAIN outputs\02_FEATURE_REVIEWED\06_family_freezes\nonlinear_distortion\qdist-v4.1.0")
 ) -ForegroundColor Cyan
 Write-Host "No manual review or reviewer labels were used."
 Write-Host "Manuscript and joint-family integration remain explicitly pending."

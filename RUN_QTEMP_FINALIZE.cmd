@@ -6,8 +6,8 @@ set "NOTEBOOK_DIR=%PROJECT_ROOT%notebooks\02_feature_extraction\06_QTEMP"
 set "SOURCE_NOTEBOOK=%NOTEBOOK_DIR%\02_finalize_disposition.ipynb"
 set "EXECUTED_NAME=02_finalize_disposition_executed.ipynb"
 set "EXECUTED_NOTEBOOK=%NOTEBOOK_DIR%\%EXECUTED_NAME%"
-set "CANDIDATE_ROOT=%PROJECT_ROOT%outputs\reviewed\06_QTEMP\qtemp-v1.0.0-candidate-g9-pending"
-set "FINAL_ROOT=%PROJECT_ROOT%outputs\reviewed\06_QTEMP\qtemp-v1.0.0-analytical-final-no-retained"
+set "CANDIDATE_ROOT=%PROJECT_ROOT%MAIN outputs\02_FEATURE_REVIEWED\00_working_candidates\temporal_discontinuity\qtemp-v1.0.0-candidate-g9-pending"
+set "FINAL_ROOT=%PROJECT_ROOT%MAIN outputs\02_FEATURE_REVIEWED\00_working_candidates\temporal_discontinuity\qtemp-v1.0.0-analytical-final-no-retained"
 
 if not exist "%PROJECT_ROOT%config\project.yaml" (
     echo ERROR: config\project.yaml was not found under:

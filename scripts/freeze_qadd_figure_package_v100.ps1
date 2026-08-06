@@ -9,9 +9,9 @@ $ErrorActionPreference = "Stop"
 $ProjectRoot = (Resolve-Path -LiteralPath $ProjectRoot).Path
 $Python = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
 $MeasurementFreeze = Join-Path $ProjectRoot `
-    "MAIN outputs\reviewed\06_family_freezes\additive_interference\qadd-v4.2.0"
+    "MAIN outputs\02_FEATURE_REVIEWED\06_family_freezes\additive_interference\qadd-v4.2.0"
 $FigureTargetParent = Join-Path $ProjectRoot `
-    "MAIN outputs\reviewed\07_figure_packages\additive_interference"
+    "MAIN outputs\02_FEATURE_REVIEWED\07_figure_packages\additive_interference"
 $FigureTarget = Join-Path $FigureTargetParent `
     "qadd-v4.2.0-figures-v1.0.0"
 $WorkbookSource = Join-Path $ProjectRoot `
@@ -246,7 +246,7 @@ if ($LASTEXITCODE -ne 0) {
 Move-Item -LiteralPath $Staging -Destination $FigureTarget
 
 $WorkbookDestinationRoot = Join-Path $ProjectRoot `
-    "MAIN outputs\reviewed\08_validation_workbooks"
+    "MAIN outputs\02_FEATURE_REVIEWED\08_validation_workbooks"
 New-Item -ItemType Directory -Path $WorkbookDestinationRoot -Force | Out-Null
 $WorkbookDestination = Join-Path $WorkbookDestinationRoot `
     "support/QADD_Family_Evaluation_Workbook_v1_0.docx"

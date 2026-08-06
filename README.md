@@ -1,6 +1,6 @@
 # Quality Framework Features Pipeline
 
-Minimal runnable repository for the Paper 1 remote-speech quality framework. Reviewed work is identified by the `paper1_qc_reviewed` package, `REVIEWED` notebook names, and explicit version numbers—not by duplicate top-level folders.
+Minimal runnable repository for the Paper 1 remote-speech quality framework. Reviewed feature work is consolidated by feature family, without duplicate source or output trees.
 
 ## Setup
 
@@ -35,7 +35,7 @@ Then run each reviewed feature family in folder order:
 5. `05_QDIST`: `01_remediation_preflight.ipynb`, `02_extract_candidate_cohort.ipynb`, `03_verify_computational.ipynb`, optional `04_human_review_optional.ipynb`, then `05_finalize.ipynb`
 6. `06_QTEMP`: `01_extract_reviewed.ipynb`, then `02_finalize_disposition.ipynb`. `RUN_QTEMP_FINALIZE.cmd` automates the final step.
 
-Run notebooks within each folder in numeric order. Supporting review contracts, checklists, and audit records are kept in that family's `support/` directory. Executed notebooks and generated tables/figures are written beneath `outputs/`; reviewed results use `outputs/reviewed/`.
+Run notebooks within each folder in numeric order. Supporting review contracts, checklists, and audit records are kept in that family's `support/` directory. Ordinary intermediate artifacts are written beneath `outputs/`. Reviewed feature candidates are written to `MAIN outputs/02_FEATURE_REVIEWED/00_working_candidates/`; approved registries, freezes, figure packages, and validation workbooks are stored in the adjacent numbered directories under `02_FEATURE_REVIEWED/`.
 
 After feature extraction, run:
 

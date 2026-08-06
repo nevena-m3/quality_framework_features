@@ -46,7 +46,7 @@ FINALIZATION_VERSION = "qdist-v4.1.0-freeze-readiness-r1"
 MEASUREMENT_VERSION = "qdist-v4.1.0"
 OUTPUT_DIRECTORY = "freeze_readiness_v1"
 FREEZE_RELATIVE = Path(
-    "MAIN outputs/reviewed/06_family_freezes/nonlinear_distortion/qdist-v4.1.0"
+    "MAIN outputs/02_FEATURE_REVIEWED/06_family_freezes/nonlinear_distortion/qdist-v4.1.0"
 )
 REQUIRED_VERIFICATION_VERSION = "qdist-v4.1.0-computational-verification-r1"
 REQUIRED_SCIENTIFIC_DECISION = (
@@ -1506,7 +1506,7 @@ def provenance_files(project_root: Path) -> list[Path]:
 
 
 def canonical_destinations(project_root: Path) -> dict[str, Path]:
-    base = project_root / "MAIN outputs/reviewed"
+    base = project_root / "MAIN outputs/02_FEATURE_REVIEWED"
     return {
         "registry_csv": base / "00_feature_registry/qdist_v410_feature_registry.csv",
         "registry_parquet": base

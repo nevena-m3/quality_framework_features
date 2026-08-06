@@ -93,11 +93,11 @@ class CohortPaths:
                 / LEGACY_MEASUREMENT_VERSION
             ),
             preflight_root=(
-                root / "outputs/reviewed" / "nonlinear_distortion"
+                root / "MAIN outputs/02_FEATURE_REVIEWED/00_working_candidates" / "nonlinear_distortion"
                 / "qdist_v410_remediation_preflight"
             ),
             output_root=(
-                root / "outputs/reviewed" / "nonlinear_distortion"
+                root / "MAIN outputs/02_FEATURE_REVIEWED/00_working_candidates" / "nonlinear_distortion"
                 / "qdist_v410_candidate_cohort"
             ),
         )

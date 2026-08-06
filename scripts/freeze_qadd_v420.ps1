@@ -9,7 +9,7 @@ $ErrorActionPreference = "Stop"
 $ProjectRoot = (Resolve-Path -LiteralPath $ProjectRoot).Path
 $Python = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
 $Candidate = Join-Path $ProjectRoot `
-    "outputs\reviewed\additive_interference\qadd-v4.2.0-final-candidate"
+    "MAIN outputs\02_FEATURE_REVIEWED\00_working_candidates\additive_interference\qadd-v4.2.0-final-candidate"
 $NotebookDir = Join-Path $ProjectRoot "notebooks\02_feature_extraction\02_QADD"
 
 $RequiredInputs = @(
@@ -136,13 +136,13 @@ finally {
 }
 
 $FreezeParent = Join-Path $ProjectRoot `
-    "MAIN outputs\reviewed\06_family_freezes\additive_interference"
+    "MAIN outputs\02_FEATURE_REVIEWED\06_family_freezes\additive_interference"
 $FreezeTarget = Join-Path $FreezeParent "qadd-v4.2.0"
 if (Test-Path -LiteralPath $FreezeTarget) {
     throw "Refusing to overwrite immutable QADD freeze: $FreezeTarget"
 }
 
-$MainReviewed = Join-Path $ProjectRoot "MAIN outputs/reviewed"
+$MainReviewed = Join-Path $ProjectRoot "MAIN outputs/02_FEATURE_REVIEWED"
 $CanonicalDestinations = @(
     "00_feature_registry\qadd_v420_feature_registry.csv",
     "00_feature_registry\qadd_v420_feature_registry.parquet",
@@ -329,5 +329,5 @@ Copy-Item `
 Write-Host ""
 Write-Host "QADD v4.2.0 FROZEN SUCCESSFULLY" -ForegroundColor Green
 Write-Host "Freeze: $FreezeTarget" -ForegroundColor Cyan
-Write-Host "Canonical reviewed outputs were published under MAIN outputs/reviewed." `
+Write-Host "Canonical reviewed outputs were published under MAIN outputs/02_FEATURE_REVIEWED." `
     -ForegroundColor Cyan

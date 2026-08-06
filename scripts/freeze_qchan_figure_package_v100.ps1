@@ -6,8 +6,8 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $ProjectRoot=(Resolve-Path -LiteralPath $ProjectRoot).Path
 $Python=Join-Path $ProjectRoot ".venv\Scripts\python.exe"
-$MeasurementFreeze=Join-Path $ProjectRoot "MAIN outputs\reviewed\06_family_freezes\channel_device\qchan-v4.0.0"
-$FigureParent=Join-Path $ProjectRoot "MAIN outputs\reviewed\07_figure_packages\channel_device"
+$MeasurementFreeze=Join-Path $ProjectRoot "MAIN outputs\02_FEATURE_REVIEWED\06_family_freezes\channel_device\qchan-v4.0.0"
+$FigureParent=Join-Path $ProjectRoot "MAIN outputs\02_FEATURE_REVIEWED\07_figure_packages\channel_device"
 $FigureTarget=Join-Path $FigureParent "qchan-v4.0.0-figures-v1.0.0"
 $Workbook=Join-Path $ProjectRoot "notebooks\02_feature_extraction\04_QCHAN\support/QCHAN_Family_Evaluation_Workbook_v1_0.docx"
 foreach ($Path in @($Python,$MeasurementFreeze,$Workbook)) { if (-not(Test-Path -LiteralPath $Path)){throw "Required QCHAN figure input missing: $Path"} }
@@ -81,7 +81,7 @@ print(json.dumps(fm,indent=2))
 $Seal | & $Python -
 if($LASTEXITCODE -ne 0){Remove-Item $Staging -Recurse -Force -ErrorAction SilentlyContinue;throw "Failed to seal QCHAN figure package."}
 Move-Item -LiteralPath $Staging -Destination $FigureTarget
-$WorkbookRoot=Join-Path $ProjectRoot 'MAIN outputs\reviewed\08_validation_workbooks'; New-Item -ItemType Directory -Path $WorkbookRoot -Force|Out-Null
+$WorkbookRoot=Join-Path $ProjectRoot 'MAIN outputs\02_FEATURE_REVIEWED\08_validation_workbooks'; New-Item -ItemType Directory -Path $WorkbookRoot -Force|Out-Null
 $WorkbookDestination=Join-Path $WorkbookRoot 'support/QCHAN_Family_Evaluation_Workbook_v1_0.docx'
 if(Test-Path -LiteralPath $WorkbookDestination){throw "Refusing to overwrite validation workbook: $WorkbookDestination"}
 Copy-Item -LiteralPath $Workbook -Destination $WorkbookDestination -Force

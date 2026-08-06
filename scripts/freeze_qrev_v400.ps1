@@ -8,10 +8,10 @@ $ErrorActionPreference = "Stop"
 
 $ProjectRoot = (Resolve-Path -LiteralPath $ProjectRoot).Path
 $Python = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
-$FinalCandidate = Join-Path $ProjectRoot "outputs\reviewed\reverberation\qrev-v4.0.0"
+$FinalCandidate = Join-Path $ProjectRoot "MAIN outputs\02_FEATURE_REVIEWED\00_working_candidates\reverberation\qrev-v4.0.0"
 $FinalManifest = Join-Path $FinalCandidate "manifests\qrev_v400_final_candidate_manifest.json"
 $ExecutedNotebook = Join-Path $ProjectRoot "notebooks\02_feature_extraction\03_QREV\03_finalize_executed.ipynb"
-$FreezeParent = Join-Path $ProjectRoot "MAIN outputs\reviewed\06_family_freezes\reverberation"
+$FreezeParent = Join-Path $ProjectRoot "MAIN outputs\02_FEATURE_REVIEWED\06_family_freezes\reverberation"
 $FreezeTarget = Join-Path $FreezeParent "qrev-v4.0.0"
 
 foreach ($Path in @($Python, $FinalCandidate, $FinalManifest, $ExecutedNotebook)) {
@@ -124,12 +124,12 @@ $Publications = @(
 )
 foreach ($Item in $Publications) {
     $Source=Join-Path $FreezeTarget $Item.Source
-    $Destination=Join-Path (Join-Path $ProjectRoot "MAIN outputs/reviewed") $Item.Destination
+    $Destination=Join-Path (Join-Path $ProjectRoot "MAIN outputs/02_FEATURE_REVIEWED") $Item.Destination
     if (Test-Path -LiteralPath $Destination) { throw "Refusing to overwrite canonical reviewed output: $Destination" }
     New-Item -ItemType Directory -Path (Split-Path -Parent $Destination) -Force | Out-Null
     Copy-Item -LiteralPath $Source -Destination $Destination -Force
 }
-$PassportDestination=Join-Path $ProjectRoot "MAIN outputs\reviewed\05_feature_passports\reverberation\qrev-v4.0.0"
+$PassportDestination=Join-Path $ProjectRoot "MAIN outputs\02_FEATURE_REVIEWED\05_feature_passports\reverberation\qrev-v4.0.0"
 if (Test-Path -LiteralPath $PassportDestination) { throw "Refusing to overwrite feature passports: $PassportDestination" }
 New-Item -ItemType Directory -Path (Split-Path -Parent $PassportDestination) -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $FreezeTarget "feature_passports") -Destination $PassportDestination -Recurse -Force
