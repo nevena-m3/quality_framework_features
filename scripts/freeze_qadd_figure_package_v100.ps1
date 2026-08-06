@@ -15,7 +15,7 @@ $FigureTargetParent = Join-Path $ProjectRoot `
 $FigureTarget = Join-Path $FigureTargetParent `
     "qadd-v4.2.0-figures-v1.0.0"
 $WorkbookSource = Join-Path $ProjectRoot `
-    "notebooks\02_feature_extraction\02_QADD\QADD_Family_Evaluation_Workbook_v1_0.docx"
+    "notebooks\02_feature_extraction\02_QADD\support/QADD_Family_Evaluation_Workbook_v1_0.docx"
 
 foreach ($Path in @($Python, $MeasurementFreeze, $WorkbookSource)) {
     if (-not (Test-Path -LiteralPath $Path)) {
@@ -125,11 +125,11 @@ New-Item -ItemType Directory -Path $Provenance -Force | Out-Null
 Copy-Item -LiteralPath $WorkbookSource -Destination $Provenance -Force
 
 $ProvenanceFiles = @(
-    "QADD_v420_FINAL_SCIENTIFIC_AUDIT.md",
-    "QADD_v420_FINAL_FEATURE_DECISIONS.csv",
-    "QADD_V4_2_0_FREEZE_CONTRACT.md",
-    "QADD_Validation_Checklist_v1_0.csv",
-    "QADD_Ten_Domain_Dashboard_v1_0.csv"
+    "support/QADD_v420_FINAL_SCIENTIFIC_AUDIT.md",
+    "support/QADD_v420_FINAL_FEATURE_DECISIONS.csv",
+    "support/QADD_V4_2_0_FREEZE_CONTRACT.md",
+    "support/QADD_Validation_Checklist_v1_0.csv",
+    "support/QADD_Ten_Domain_Dashboard_v1_0.csv"
 )
 foreach ($Name in $ProvenanceFiles) {
     $Source = Join-Path $ProjectRoot "notebooks\02_feature_extraction\02_QADD\$Name"
@@ -139,14 +139,14 @@ foreach ($Name in $ProvenanceFiles) {
 }
 
 $ExecutedNotebook = Join-Path $MeasurementFreeze `
-    "provenance\02a_additive_interference_QADD_v4_2_0_EXECUTED_FINAL.ipynb"
+    "provenance\03_finalize_executed.ipynb"
 if (Test-Path -LiteralPath $ExecutedNotebook) {
     Copy-Item -LiteralPath $ExecutedNotebook -Destination $Provenance -Force
 }
 
 $env:QADD_FIGURE_STAGING = $Staging
 $env:QADD_WORKBOOK = Join-Path $Provenance `
-    "QADD_Family_Evaluation_Workbook_v1_0.docx"
+    "support/QADD_Family_Evaluation_Workbook_v1_0.docx"
 
 $SealScript = @'
 from __future__ import annotations
@@ -249,7 +249,7 @@ $WorkbookDestinationRoot = Join-Path $ProjectRoot `
     "MAIN outputs\reviewed\08_validation_workbooks"
 New-Item -ItemType Directory -Path $WorkbookDestinationRoot -Force | Out-Null
 $WorkbookDestination = Join-Path $WorkbookDestinationRoot `
-    "QADD_Family_Evaluation_Workbook_v1_0.docx"
+    "support/QADD_Family_Evaluation_Workbook_v1_0.docx"
 if (Test-Path -LiteralPath $WorkbookDestination) {
     throw "Refusing to overwrite existing validation workbook: $WorkbookDestination"
 }

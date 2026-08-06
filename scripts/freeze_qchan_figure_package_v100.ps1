@@ -9,7 +9,7 @@ $Python=Join-Path $ProjectRoot ".venv\Scripts\python.exe"
 $MeasurementFreeze=Join-Path $ProjectRoot "MAIN outputs\reviewed\06_family_freezes\channel_device\qchan-v4.0.0"
 $FigureParent=Join-Path $ProjectRoot "MAIN outputs\reviewed\07_figure_packages\channel_device"
 $FigureTarget=Join-Path $FigureParent "qchan-v4.0.0-figures-v1.0.0"
-$Workbook=Join-Path $ProjectRoot "notebooks\02_feature_extraction\04_QCHAN\QCHAN_Family_Evaluation_Workbook_v1_0.docx"
+$Workbook=Join-Path $ProjectRoot "notebooks\02_feature_extraction\04_QCHAN\support/QCHAN_Family_Evaluation_Workbook_v1_0.docx"
 foreach ($Path in @($Python,$MeasurementFreeze,$Workbook)) { if (-not(Test-Path -LiteralPath $Path)){throw "Required QCHAN figure input missing: $Path"} }
 if (Test-Path -LiteralPath $FigureTarget){throw "Refusing to overwrite immutable QCHAN figure package: $FigureTarget"}
 $MeasurementManifest=Join-Path $MeasurementFreeze "manifests\qchan_v400_freeze_manifest.json"
@@ -46,12 +46,12 @@ foreach($Name in @('qchan_v400_ten_domain_dashboard.csv','qchan_v400_gate_summar
 }
 $Prov=Join-Path $Staging 'provenance'; New-Item -ItemType Directory -Path $Prov -Force|Out-Null
 Copy-Item -LiteralPath $Workbook -Destination $Prov -Force
-foreach($Name in @('QCHAN_v400_FINAL_SCIENTIFIC_AUDIT.md','QCHAN_v400_FINAL_FEATURE_DECISIONS.csv','QCHAN_V4_0_0_FREEZE_CONTRACT.md','QCHAN_Validation_Checklist_v1_0.csv','QCHAN_Ten_Domain_Dashboard_v1_0.csv','QCHAN_Gate_Summary_FINAL_v1_0.csv','QCHAN_V400_FINALIZATION_IMPLEMENTATION_REPORT.md')){
+foreach($Name in @('support/QCHAN_v400_FINAL_SCIENTIFIC_AUDIT.md','support/QCHAN_v400_FINAL_FEATURE_DECISIONS.csv','support/QCHAN_V4_0_0_FREEZE_CONTRACT.md','support/QCHAN_Validation_Checklist_v1_0.csv','support/QCHAN_Ten_Domain_Dashboard_v1_0.csv','support/QCHAN_Gate_Summary_FINAL_v1_0.csv','support/QCHAN_V400_FINALIZATION_IMPLEMENTATION_REPORT.md')){
  $Source=Join-Path $ProjectRoot ("notebooks\02_feature_extraction\04_QCHAN\"+$Name); if(Test-Path -LiteralPath $Source){Copy-Item $Source -Destination $Prov -Force}
 }
-$Executed=Join-Path $MeasurementFreeze 'provenance\04_channel_device_QCHAN_v4_0_0_EXECUTED_FINAL.ipynb'; if(Test-Path $Executed){Copy-Item $Executed -Destination $Prov -Force}
+$Executed=Join-Path $MeasurementFreeze 'provenance\03_finalize_executed.ipynb'; if(Test-Path $Executed){Copy-Item $Executed -Destination $Prov -Force}
 $env:QCHAN_FIGURE_STAGING=$Staging
-$env:QCHAN_WORKBOOK=Join-Path $Prov 'QCHAN_Family_Evaluation_Workbook_v1_0.docx'
+$env:QCHAN_WORKBOOK=Join-Path $Prov 'support/QCHAN_Family_Evaluation_Workbook_v1_0.docx'
 $Seal=@'
 import hashlib,json,os
 from datetime import datetime,timezone
@@ -82,7 +82,7 @@ $Seal | & $Python -
 if($LASTEXITCODE -ne 0){Remove-Item $Staging -Recurse -Force -ErrorAction SilentlyContinue;throw "Failed to seal QCHAN figure package."}
 Move-Item -LiteralPath $Staging -Destination $FigureTarget
 $WorkbookRoot=Join-Path $ProjectRoot 'MAIN outputs\reviewed\08_validation_workbooks'; New-Item -ItemType Directory -Path $WorkbookRoot -Force|Out-Null
-$WorkbookDestination=Join-Path $WorkbookRoot 'QCHAN_Family_Evaluation_Workbook_v1_0.docx'
+$WorkbookDestination=Join-Path $WorkbookRoot 'support/QCHAN_Family_Evaluation_Workbook_v1_0.docx'
 if(Test-Path -LiteralPath $WorkbookDestination){throw "Refusing to overwrite validation workbook: $WorkbookDestination"}
 Copy-Item -LiteralPath $Workbook -Destination $WorkbookDestination -Force
 Write-Host ""

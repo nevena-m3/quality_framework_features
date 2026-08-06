@@ -368,7 +368,7 @@ def test_cohort_notebook_uses_resolvable_parameter_grid_and_explicit_schemas():
         ROOT
         / "notebooks/02_feature_extraction"
         / "04_QCHAN"
-        / "04_channel_device_QCHAN_v4_0_0_REVIEWED_COHORT_SOURCE.ipynb"
+        / "02_extract_cohort.ipynb"
     )
     text = notebook_path.read_text(encoding="utf-8")
     assert "octave_fraction_1" in text
@@ -468,7 +468,7 @@ def test_cohort_notebook_uses_governed_unique_gallery_selector():
         ROOT
         / "notebooks/02_feature_extraction"
         / "04_QCHAN"
-        / "04_channel_device_QCHAN_v4_0_0_REVIEWED_COHORT_SOURCE.ipynb"
+        / "02_extract_cohort.ipynb"
     )
     text = notebook_path.read_text(encoding="utf-8")
     assert "deterministic_gallery_selection" in text
@@ -586,7 +586,7 @@ def test_cohort_notebook_uses_explicit_gallery_linked_view_contract():
         ROOT
         / "notebooks/02_feature_extraction"
         / "04_QCHAN"
-        / "04_channel_device_QCHAN_v4_0_0_REVIEWED_COHORT_SOURCE.ipynb"
+        / "02_extract_cohort.ipynb"
     )
     text = notebook_path.read_text(encoding="utf-8")
     assert "gallery_linked_view_source" in text

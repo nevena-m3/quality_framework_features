@@ -21,12 +21,12 @@ $RequiredInputs = @(
     (Join-Path $ProjectRoot "tests\test_qadd_v420.py"),
     (Join-Path $ProjectRoot "tests\test_qadd_v420_cohort.py"),
     (Join-Path $ProjectRoot "tests\test_qadd_v420_final.py"),
-    (Join-Path $NotebookDir "QADD_V4_2_0_FREEZE_CONTRACT.md"),
-    (Join-Path $NotebookDir "QADD_v420_FINAL_SCIENTIFIC_AUDIT.md"),
-    (Join-Path $NotebookDir "QADD_v420_FINAL_FEATURE_DECISIONS.csv"),
-    (Join-Path $NotebookDir "QADD_Family_Evaluation_Workbook_v1_0.docx"),
-    (Join-Path $NotebookDir "QADD_Validation_Checklist_v1_0.csv"),
-    (Join-Path $NotebookDir "QADD_Ten_Domain_Dashboard_v1_0.csv")
+    (Join-Path $NotebookDir "support/QADD_V4_2_0_FREEZE_CONTRACT.md"),
+    (Join-Path $NotebookDir "support/QADD_v420_FINAL_SCIENTIFIC_AUDIT.md"),
+    (Join-Path $NotebookDir "support/QADD_v420_FINAL_FEATURE_DECISIONS.csv"),
+    (Join-Path $NotebookDir "support/QADD_Family_Evaluation_Workbook_v1_0.docx"),
+    (Join-Path $NotebookDir "support/QADD_Validation_Checklist_v1_0.csv"),
+    (Join-Path $NotebookDir "support/QADD_Ten_Domain_Dashboard_v1_0.csv")
 )
 foreach ($Path in $RequiredInputs) {
     if (-not (Test-Path -LiteralPath $Path)) {
@@ -37,7 +37,7 @@ foreach ($Path in $RequiredInputs) {
 $ExecutedNotebook = Get-ChildItem `
     -LiteralPath $NotebookDir `
     -File `
-    -Filter "*QADD_v4_2_0*LOCAL_FINALIZE*.ipynb" |
+    -Filter "03_finalize_executed*.ipynb" |
 Sort-Object LastWriteTime -Descending |
 Select-Object -First 1
 if (-not $ExecutedNotebook) {
@@ -171,7 +171,7 @@ New-Item -ItemType Directory -Path $Provenance -Force | Out-Null
 Copy-Item `
     -LiteralPath $ExecutedNotebook.FullName `
     -Destination (Join-Path $Provenance `
-        "02a_additive_interference_QADD_v4_2_0_EXECUTED_FINAL.ipynb") `
+        "03_finalize_executed.ipynb") `
     -Force
 
 $ProvenanceFiles = @(
@@ -181,12 +181,12 @@ $ProvenanceFiles = @(
     "tests\test_qadd_v420.py",
     "tests\test_qadd_v420_cohort.py",
     "tests\test_qadd_v420_final.py",
-    "notebooks\02_feature_extraction\02_QADD\QADD_V4_2_0_FREEZE_CONTRACT.md",
-    "notebooks\02_feature_extraction\02_QADD\QADD_v420_FINAL_SCIENTIFIC_AUDIT.md",
-    "notebooks\02_feature_extraction\02_QADD\QADD_v420_FINAL_FEATURE_DECISIONS.csv",
-    "notebooks\02_feature_extraction\02_QADD\QADD_Family_Evaluation_Workbook_v1_0.docx",
-    "notebooks\02_feature_extraction\02_QADD\QADD_Validation_Checklist_v1_0.csv",
-    "notebooks\02_feature_extraction\02_QADD\QADD_Ten_Domain_Dashboard_v1_0.csv"
+    "notebooks\02_feature_extraction\02_QADD\support/QADD_V4_2_0_FREEZE_CONTRACT.md",
+    "notebooks\02_feature_extraction\02_QADD\support/QADD_v420_FINAL_SCIENTIFIC_AUDIT.md",
+    "notebooks\02_feature_extraction\02_QADD\support/QADD_v420_FINAL_FEATURE_DECISIONS.csv",
+    "notebooks\02_feature_extraction\02_QADD\support/QADD_Family_Evaluation_Workbook_v1_0.docx",
+    "notebooks\02_feature_extraction\02_QADD\support/QADD_Validation_Checklist_v1_0.csv",
+    "notebooks\02_feature_extraction\02_QADD\support/QADD_Ten_Domain_Dashboard_v1_0.csv"
 )
 foreach ($RelativePath in $ProvenanceFiles) {
     Copy-Item `
@@ -197,7 +197,7 @@ foreach ($RelativePath in $ProvenanceFiles) {
 
 $env:QADD_STAGING = $Staging
 $env:QADD_EXECUTED_NOTEBOOK = Join-Path $Provenance `
-    "02a_additive_interference_QADD_v4_2_0_EXECUTED_FINAL.ipynb"
+    "03_finalize_executed.ipynb"
 
 $SealScript = @'
 from __future__ import annotations

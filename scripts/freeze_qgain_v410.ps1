@@ -12,9 +12,9 @@ $Candidate = Join-Path $ProjectRoot "outputs\reviewed\gain_dynamics\qgain-v4.1.0
 $NotebookDir = Join-Path $ProjectRoot "notebooks\02_feature_extraction\01_QGAIN"
 $Module = Join-Path $ProjectRoot "src\paper1_qc_reviewed\qgain_v410.py"
 $Tests = Join-Path $ProjectRoot "tests\test_qgain_v410.py"
-$Contract = Join-Path $NotebookDir "QGAIN_V4_1_0_FREEZE_CONTRACT.md"
-$Audit = Join-Path $NotebookDir "QGAIN_v401_FINAL_SCIENTIFIC_AUDIT.md"
-$Decisions = Join-Path $NotebookDir "QGAIN_v401_FEATURE_DECISIONS.csv"
+$Contract = Join-Path $NotebookDir "support/QGAIN_V4_1_0_FREEZE_CONTRACT.md"
+$Audit = Join-Path $NotebookDir "support/QGAIN_v401_FINAL_SCIENTIFIC_AUDIT.md"
+$Decisions = Join-Path $NotebookDir "support/QGAIN_v401_FEATURE_DECISIONS.csv"
 
 foreach ($Path in @($Python, $Candidate, $NotebookDir, $Module, $Tests, $Contract)) {
     if (-not (Test-Path -LiteralPath $Path)) {
@@ -25,7 +25,7 @@ foreach ($Path in @($Python, $Candidate, $NotebookDir, $Module, $Tests, $Contrac
 $ExecutedNotebook = Get-ChildItem `
     -LiteralPath $NotebookDir `
     -File `
-    -Filter "*QGAIN_v4_1_0*LOCAL_FINALIZE*.ipynb" |
+    -Filter "03_finalize_executed*.ipynb" |
 Sort-Object LastWriteTime -Descending |
 Select-Object -First 1
 
@@ -136,7 +136,7 @@ Copy-Item -LiteralPath $Candidate -Destination $Staging -Recurse -Force
 
 $Provenance = Join-Path $Staging "provenance"
 New-Item -ItemType Directory -Path $Provenance -Force | Out-Null
-Copy-Item -LiteralPath $ExecutedNotebook.FullName -Destination (Join-Path $Provenance "02b_gain_dynamics_QGAIN_v4_1_0_EXECUTED_FINAL.ipynb") -Force
+Copy-Item -LiteralPath $ExecutedNotebook.FullName -Destination (Join-Path $Provenance "03_finalize_executed.ipynb") -Force
 Copy-Item -LiteralPath $Module -Destination $Provenance -Force
 Copy-Item -LiteralPath $Tests -Destination $Provenance -Force
 Copy-Item -LiteralPath $Contract -Destination $Provenance -Force
@@ -144,7 +144,7 @@ if (Test-Path -LiteralPath $Audit) { Copy-Item -LiteralPath $Audit -Destination 
 if (Test-Path -LiteralPath $Decisions) { Copy-Item -LiteralPath $Decisions -Destination $Provenance -Force }
 
 $env:QGAIN_STAGING = $Staging
-$env:QGAIN_EXECUTED_NOTEBOOK = (Join-Path $Provenance "02b_gain_dynamics_QGAIN_v4_1_0_EXECUTED_FINAL.ipynb")
+$env:QGAIN_EXECUTED_NOTEBOOK = (Join-Path $Provenance "03_finalize_executed.ipynb")
 
 $SealScript = @'
 from __future__ import annotations

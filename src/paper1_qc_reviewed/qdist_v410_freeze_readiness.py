@@ -1498,9 +1498,9 @@ def provenance_files(project_root: Path) -> list[Path]:
         project_root
         / "tests/test_qdist_v410_freeze_readiness.py",
         project_root
-        / "notebooks/02_feature_extraction/05_QDIST/QDIST_V4_1_0_MEASUREMENT_FREEZE_CONTRACT.md",
+        / "notebooks/02_feature_extraction/05_QDIST/support/QDIST_V4_1_0_MEASUREMENT_FREEZE_CONTRACT.md",
         project_root
-        / "notebooks/02_feature_extraction/05_QDIST/QDIST_v410_AUTOMATED_FREEZE_PROTOCOL.md",
+        / "notebooks/02_feature_extraction/05_QDIST/support/QDIST_v410_AUTOMATED_FREEZE_PROTOCOL.md",
     ]
     return [path for path in candidates if path.is_file()]
 

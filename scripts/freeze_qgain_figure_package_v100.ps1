@@ -11,7 +11,7 @@ $Candidate = Join-Path $ProjectRoot "outputs\reviewed\gain_dynamics\qgain-v4.1.0
 $FinalParent = Join-Path $ProjectRoot "MAIN outputs\reviewed\07_figure_packages\gain_dynamics"
 $Final = Join-Path $FinalParent "qgain-v4.1.0-figures-v1.0.0"
 $Staging = Join-Path $FinalParent "qgain-v4.1.0-figures-v1.0.0.__staging__"
-$Notebook = Join-Path $ProjectRoot "notebooks\02_feature_extraction\01_QGAIN\02b_gain_dynamics_QGAIN_v4_1_0_FIGURE_COMPLETION_LOCAL_RUN.ipynb"
+$Notebook = Join-Path $ProjectRoot "notebooks\02_feature_extraction\01_QGAIN\02_figures_executed.ipynb"
 $Python = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
 $TestFile = Join-Path $ProjectRoot "tests\test_qgain_figure_completion_v100.py"
 
@@ -73,7 +73,7 @@ Copy-Item -LiteralPath $Candidate -Destination $Staging -Recurse -Force
 
 $Prov = Join-Path $Staging "provenance"
 New-Item -ItemType Directory -Path $Prov -Force | Out-Null
-Copy-Item -LiteralPath $Notebook -Destination (Join-Path $Prov "02b_gain_dynamics_QGAIN_v4_1_0_FIGURE_COMPLETION_EXECUTED.ipynb") -Force
+Copy-Item -LiteralPath $Notebook -Destination (Join-Path $Prov "02_figures_executed.ipynb") -Force
 Copy-Item -LiteralPath (Join-Path $ProjectRoot "src\paper1_qc_reviewed\qgain_figure_completion_v100.py") -Destination $Prov -Force
 Copy-Item -LiteralPath $TestFile -Destination $Prov -Force
 Copy-Item -LiteralPath (Join-Path $ProjectRoot "docs reviewed\QGAIN_FIGURE_COMPLETION_CONTRACT_v1_0.md") -Destination $Prov -Force
@@ -94,7 +94,7 @@ $Rows = foreach ($File in $Files) {
 }
 $Rows | Export-Csv -LiteralPath $InventoryPath -NoTypeInformation -Encoding UTF8
 $InventorySha = Get-Sha256 $InventoryPath
-$NotebookSha = Get-Sha256 (Join-Path $Prov "02b_gain_dynamics_QGAIN_v4_1_0_FIGURE_COMPLETION_EXECUTED.ipynb")
+$NotebookSha = Get-Sha256 (Join-Path $Prov "02_figures_executed.ipynb")
 
 $CandidateManifestPath = Join-Path $Staging "manifests\qgain_v410_figure_package_manifest.json"
 $CandidateManifest = Get-Content -LiteralPath $CandidateManifestPath -Raw | ConvertFrom-Json
@@ -116,7 +116,7 @@ $FinalManifest = [ordered]@{
     feature_values_recomputed = $false
     family_scalar_constructed = $false
     standalone_gate_allowed = $false
-    executed_notebook_relative_path = "provenance/02b_gain_dynamics_QGAIN_v4_1_0_FIGURE_COMPLETION_EXECUTED.ipynb"
+    executed_notebook_relative_path = "provenance/02_figures_executed.ipynb"
     executed_notebook_sha256 = $NotebookSha
     artifact_count_excluding_seal_files = $Rows.Count
     freeze_inventory_sha256 = $InventorySha

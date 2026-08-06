@@ -10,7 +10,7 @@ $ProjectRoot = (Resolve-Path -LiteralPath $ProjectRoot).Path
 $Python = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
 $FinalCandidate = Join-Path $ProjectRoot "outputs\reviewed\reverberation\qrev-v4.0.0"
 $FinalManifest = Join-Path $FinalCandidate "manifests\qrev_v400_final_candidate_manifest.json"
-$ExecutedNotebook = Join-Path $ProjectRoot "notebooks\02_feature_extraction\03_QREV\03_reverberation_QREV_v4_0_0_LOCAL_FINALIZE.ipynb"
+$ExecutedNotebook = Join-Path $ProjectRoot "notebooks\02_feature_extraction\03_QREV\03_finalize_executed.ipynb"
 $FreezeParent = Join-Path $ProjectRoot "MAIN outputs\reviewed\06_family_freezes\reverberation"
 $FreezeTarget = Join-Path $FreezeParent "qrev-v4.0.0"
 
@@ -64,7 +64,7 @@ $Staging = Join-Path $FreezeParent (".qrev-v4.0.0.staging." + [guid]::NewGuid().
 Copy-Item -LiteralPath $FinalCandidate -Destination $Staging -Recurse -Force
 $Provenance = Join-Path $Staging "provenance"
 New-Item -ItemType Directory -Path $Provenance -Force | Out-Null
-$FrozenNotebook = Join-Path $Provenance "03_reverberation_QREV_v4_0_0_EXECUTED_FINAL.ipynb"
+$FrozenNotebook = Join-Path $Provenance "03_finalize_executed.ipynb"
 Copy-Item -LiteralPath $ExecutedNotebook -Destination $FrozenNotebook -Force
 
 $env:QREV_FREEZE_STAGING = $Staging

@@ -10,7 +10,7 @@ $ProjectRoot = (Resolve-Path -LiteralPath $ProjectRoot).Path
 $Python = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
 $FinalCandidate = Join-Path $ProjectRoot "outputs\reviewed\channel_device\qchan-v4.0.0"
 $FinalManifest = Join-Path $FinalCandidate "manifests\qchan_v400_final_candidate_manifest.json"
-$ExecutedNotebook = Join-Path $ProjectRoot "notebooks\02_feature_extraction\04_QCHAN\04_channel_device_QCHAN_v4_0_0_LOCAL_FINALIZE.ipynb"
+$ExecutedNotebook = Join-Path $ProjectRoot "notebooks\02_feature_extraction\04_QCHAN\03_finalize_executed.ipynb"
 $FreezeParent = Join-Path $ProjectRoot "MAIN outputs\reviewed\06_family_freezes\channel_device"
 $FreezeTarget = Join-Path $FreezeParent "qchan-v4.0.0"
 
@@ -62,7 +62,7 @@ New-Item -ItemType Directory -Path $FreezeParent -Force | Out-Null
 $Staging = Join-Path $FreezeParent (".qchan-v4.0.0.staging." + [guid]::NewGuid().ToString("N"))
 Copy-Item -LiteralPath $FinalCandidate -Destination $Staging -Recurse -Force
 $Provenance=Join-Path $Staging "provenance"; New-Item -ItemType Directory -Path $Provenance -Force|Out-Null
-Copy-Item -LiteralPath $ExecutedNotebook -Destination (Join-Path $Provenance "04_channel_device_QCHAN_v4_0_0_EXECUTED_FINAL.ipynb") -Force
+Copy-Item -LiteralPath $ExecutedNotebook -Destination (Join-Path $Provenance "03_finalize_executed.ipynb") -Force
 
 $env:QCHAN_FREEZE_STAGING=$Staging
 $Seal=@'
@@ -85,7 +85,7 @@ for p in sorted(x for x in root.rglob('*') if x.is_file()):
  if rel in excluded: continue
  rows.append({'relative_path':rel,'bytes':p.stat().st_size,'sha256':sha(p)})
 inv=pd.DataFrame(rows); inv_path=root/'manifests/qchan_v400_freeze_inventory.csv'; inv.to_csv(inv_path,index=False)
-notebook=root/'provenance/04_channel_device_QCHAN_v4_0_0_EXECUTED_FINAL.ipynb'
+notebook=root/'provenance/03_finalize_executed.ipynb'
 freeze=dict(final)
 freeze.update({
  'freeze_status':'frozen','freeze_allowed':False,

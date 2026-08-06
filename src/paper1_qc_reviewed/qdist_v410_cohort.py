@@ -2590,7 +2590,7 @@ def run_candidate_cohort(
 
     checklist_source = (
         paths.project_root / "notebooks/02_feature_extraction" / "05_QDIST"
-        / "QDIST_Master_Validation_Checklist_v1_1_REMEDIATION.csv"
+        / "support/QDIST_Master_Validation_Checklist_v1_1_REMEDIATION.csv"
     )
     checklist = update_validation_checklist(
         checklist_source,

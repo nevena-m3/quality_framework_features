@@ -28,14 +28,14 @@ Run the preparation notebooks first:
 
 Then run each reviewed feature family in folder order:
 
-1. `notebooks/02_feature_extraction/01_QGAIN/` — v4.0.1 extraction, v4.1.0 figure completion, then finalization.
-2. `notebooks/02_feature_extraction/02_QADD/` — preflight, cohort, then finalization.
-3. `notebooks/02_feature_extraction/03_QREV/` — preflight, cohort, then finalization.
-4. `notebooks/02_feature_extraction/04_QCHAN/` — preflight, cohort, then finalization.
-5. `notebooks/02_feature_extraction/05_QDIST/` — remediation preflight, candidate cohort, computational verification, optional human adjudication, then automated finalization.
-6. `notebooks/02_feature_extraction/06_QTEMP/` — reviewed source, then final analytical disposition. `RUN_QTEMP_FINALIZE.cmd` automates the final step.
+1. `01_QGAIN`: `01_extract.ipynb`, `02_figures.ipynb`, `03_finalize.ipynb`
+2. `02_QADD`: `01_preflight.ipynb`, `02_extract_cohort.ipynb`, `03_finalize.ipynb`
+3. `03_QREV`: `01_preflight.ipynb`, `02_extract_cohort.ipynb`, `03_finalize.ipynb`
+4. `04_QCHAN`: `01_preflight.ipynb`, `02_extract_cohort.ipynb`, `03_finalize.ipynb`
+5. `05_QDIST`: `01_remediation_preflight.ipynb`, `02_extract_candidate_cohort.ipynb`, `03_verify_computational.ipynb`, optional `04_human_review_optional.ipynb`, then `05_finalize.ipynb`
+6. `06_QTEMP`: `01_extract_reviewed.ipynb`, then `02_finalize_disposition.ipynb`. `RUN_QTEMP_FINALIZE.cmd` automates the final step.
 
-Only `*_SOURCE.ipynb` notebooks are version-controlled. Executed notebooks and generated tables/figures are written beneath `outputs/`; reviewed results use `outputs/reviewed/`.
+Run notebooks within each folder in numeric order. Supporting review contracts, checklists, and audit records are kept in that family's `support/` directory. Executed notebooks and generated tables/figures are written beneath `outputs/`; reviewed results use `outputs/reviewed/`.
 
 After feature extraction, run:
 

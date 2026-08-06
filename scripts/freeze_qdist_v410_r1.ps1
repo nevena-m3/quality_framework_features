@@ -25,8 +25,8 @@ $Required = @(
     (Join-Path $ProjectRoot "tests\test_qdist_v410_candidate.py"),
     (Join-Path $ProjectRoot "tests\test_qdist_v410_computational_verification.py"),
     (Join-Path $ProjectRoot "tests\test_qdist_v410_freeze_readiness.py"),
-    (Join-Path $ProjectRoot "notebooks\02_feature_extraction\05_QDIST\QDIST_V4_1_0_MEASUREMENT_FREEZE_CONTRACT.md"),
-    (Join-Path $ProjectRoot "notebooks\02_feature_extraction\05_QDIST\QDIST_v410_AUTOMATED_FREEZE_PROTOCOL.md")
+    (Join-Path $ProjectRoot "notebooks\02_feature_extraction\05_QDIST\support/QDIST_V4_1_0_MEASUREMENT_FREEZE_CONTRACT.md"),
+    (Join-Path $ProjectRoot "notebooks\02_feature_extraction\05_QDIST\support/QDIST_v410_AUTOMATED_FREEZE_PROTOCOL.md")
 )
 foreach ($Path in $Required) {
     if (-not (Test-Path -LiteralPath $Path)) {

@@ -3,8 +3,8 @@ setlocal EnableExtensions
 
 set "PROJECT_ROOT=%~dp0"
 set "NOTEBOOK_DIR=%PROJECT_ROOT%notebooks\02_feature_extraction\06_QTEMP"
-set "SOURCE_NOTEBOOK=%NOTEBOOK_DIR%\06_temporal_discontinuity_QTEMP_v1_0_0_FINAL_ANALYTICAL_DISPOSITION_SOURCE.ipynb"
-set "EXECUTED_NAME=06_temporal_discontinuity_QTEMP_v1_0_0_FINAL_ANALYTICAL_DISPOSITION_EXECUTED.ipynb"
+set "SOURCE_NOTEBOOK=%NOTEBOOK_DIR%\02_finalize_disposition.ipynb"
+set "EXECUTED_NAME=02_finalize_disposition_executed.ipynb"
 set "EXECUTED_NOTEBOOK=%NOTEBOOK_DIR%\%EXECUTED_NAME%"
 set "CANDIDATE_ROOT=%PROJECT_ROOT%outputs\reviewed\06_QTEMP\qtemp-v1.0.0-candidate-g9-pending"
 set "FINAL_ROOT=%PROJECT_ROOT%outputs\reviewed\06_QTEMP\qtemp-v1.0.0-analytical-final-no-retained"

@@ -9,7 +9,7 @@ $Python=Join-Path $ProjectRoot ".venv\Scripts\python.exe"
 $MeasurementFreeze=Join-Path $ProjectRoot "MAIN outputs\reviewed\06_family_freezes\reverberation\qrev-v4.0.0"
 $FigureParent=Join-Path $ProjectRoot "MAIN outputs\reviewed\07_figure_packages\reverberation"
 $FigureTarget=Join-Path $FigureParent "qrev-v4.0.0-figures-v1.0.0"
-$Workbook=Join-Path $ProjectRoot "notebooks\02_feature_extraction\03_QREV\QREV_Family_Evaluation_Workbook_v1_0.docx"
+$Workbook=Join-Path $ProjectRoot "notebooks\02_feature_extraction\03_QREV\support/QREV_Family_Evaluation_Workbook_v1_0.docx"
 foreach ($Path in @($Python,$MeasurementFreeze,$Workbook)) { if (-not(Test-Path -LiteralPath $Path)){throw "Required QREV figure input missing: $Path"} }
 if (Test-Path -LiteralPath $FigureTarget){throw "Refusing to overwrite immutable QREV figure package: $FigureTarget"}
 $MeasurementManifest=Join-Path $MeasurementFreeze "manifests\qrev_v400_freeze_manifest.json"
@@ -46,12 +46,12 @@ foreach($Name in @('qrev_v400_ten_domain_dashboard.csv','qrev_v400_gate_summary_
 }
 $Prov=Join-Path $Staging 'provenance'; New-Item -ItemType Directory -Path $Prov -Force|Out-Null
 Copy-Item -LiteralPath $Workbook -Destination $Prov -Force
-foreach($Name in @('QREV_v400_FINAL_SCIENTIFIC_AUDIT.md','QREV_v400_FINAL_FEATURE_DECISIONS.csv','QREV_V4_0_0_FREEZE_CONTRACT.md','QREV_Validation_Checklist_v1_0.csv','QREV_Ten_Domain_Dashboard_v1_0.csv','QREV_V400_FINALIZATION_IMPLEMENTATION_REPORT.md')){
+foreach($Name in @('support/QREV_v400_FINAL_SCIENTIFIC_AUDIT.md','support/QREV_v400_FINAL_FEATURE_DECISIONS.csv','support/QREV_V4_0_0_FREEZE_CONTRACT.md','support/QREV_Validation_Checklist_v1_0.csv','support/QREV_Ten_Domain_Dashboard_v1_0.csv','support/QREV_V400_FINALIZATION_IMPLEMENTATION_REPORT.md')){
  $Source=Join-Path $ProjectRoot ("notebooks\02_feature_extraction\03_QREV\"+$Name); if(Test-Path -LiteralPath $Source){Copy-Item $Source -Destination $Prov -Force}
 }
-$Executed=Join-Path $MeasurementFreeze 'provenance\03_reverberation_QREV_v4_0_0_EXECUTED_FINAL.ipynb'; if(Test-Path $Executed){Copy-Item $Executed -Destination $Prov -Force}
+$Executed=Join-Path $MeasurementFreeze 'provenance\03_finalize_executed.ipynb'; if(Test-Path $Executed){Copy-Item $Executed -Destination $Prov -Force}
 $env:QREV_FIGURE_STAGING=$Staging
-$env:QREV_WORKBOOK=Join-Path $Prov 'QREV_Family_Evaluation_Workbook_v1_0.docx'
+$env:QREV_WORKBOOK=Join-Path $Prov 'support/QREV_Family_Evaluation_Workbook_v1_0.docx'
 $Seal=@'
 import hashlib,json,os
 from datetime import datetime,timezone
@@ -82,7 +82,7 @@ $Seal | & $Python -
 if($LASTEXITCODE -ne 0){Remove-Item $Staging -Recurse -Force -ErrorAction SilentlyContinue;throw "Failed to seal QREV figure package."}
 Move-Item -LiteralPath $Staging -Destination $FigureTarget
 $WorkbookRoot=Join-Path $ProjectRoot 'MAIN outputs\reviewed\08_validation_workbooks'; New-Item -ItemType Directory -Path $WorkbookRoot -Force|Out-Null
-$WorkbookDestination=Join-Path $WorkbookRoot 'QREV_Family_Evaluation_Workbook_v1_0.docx'
+$WorkbookDestination=Join-Path $WorkbookRoot 'support/QREV_Family_Evaluation_Workbook_v1_0.docx'
 if(Test-Path -LiteralPath $WorkbookDestination){throw "Refusing to overwrite validation workbook: $WorkbookDestination"}
 Copy-Item -LiteralPath $Workbook -Destination $WorkbookDestination -Force
 Write-Host ""
