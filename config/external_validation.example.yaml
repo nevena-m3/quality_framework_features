@@ -1,0 +1,66 @@
+# External validation and final-audit configuration
+#
+# Copy to config/external_validation.yaml and edit locally.
+# Do not commit participant paths, identifiers, protected data, model weights, or
+# generated external-score tables.
+
+audit:
+  version: external-validation-audit-v0.1.0
+
+# CSV with exactly one row per recording and at least:
+#   logical_recording_id,audio_path
+# audio_path may be absolute or relative to the repository root.
+audio_manifest: config/external_validation_manifest.csv
+
+run:
+  # Set to null for the full cohort. Use a small number for the first smoke test.
+  max_recordings: 10
+
+tools:
+  ffmpeg: ffmpeg
+  librosa: auto
+  pyloudnorm: auto
+
+  # Essentia wheels are platform/Python-version dependent. Leave disabled unless
+  # you have installed and tested it in a separate compatible environment.
+  essentia: disabled
+
+  # Heavy neural metrics are not installed by the base repository. Their outputs
+  # are imported below from versioned CSVs produced by their official/reference
+  # implementations.
+  torchaudio: disabled
+  srmrpy: disabled
+
+native_peak_audit:
+  # Comparator only. This threshold does not define accepted QDIST clipping events.
+  near_fullscale: 0.999
+
+# Optional precomputed outputs from external repositories or model environments.
+# Each table must contain one unique recording identifier plus model outputs.
+# Output columns are prefixed automatically (e.g., bak -> dnsmos_bak).
+imported_scores:
+  nisqa: null
+  dnsmos: null
+  squim: null
+  srmrpy: null
+
+imported_id_columns:
+  nisqa: logical_recording_id
+  dnsmos: logical_recording_id
+  squim: logical_recording_id
+  srmrpy: logical_recording_id
+
+statistics:
+  bootstrap_iterations: 2000
+  random_seed: 20260806
+  # Participant-clustered bootstrap is used when this column exists in the
+  # reviewed feature release. Otherwise the notebook reports that row bootstrap
+  # was used.
+  cluster_column: SubjectID
+
+final_verdict:
+  minimum_external_n: 40
+  minimum_absolute_spearman_for_convergence: 0.30
+  minimum_directional_bootstrap_probability: 0.90
+  maximum_missing_fraction_for_primary: 0.25
+  minimum_window_stability: 0.80
