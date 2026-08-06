@@ -262,6 +262,27 @@ The QDIST candidate-cohort run is restartable when its notebook’s `RESUME=True
 
 On Windows, `RUN_QTEMP_FINALIZE.cmd` executes the final notebook and checks the expected output. Additional historical QTEMP evidence is preserved beneath `temporal_discontinuity/_archive/`.
 
+#### Interactive listening review notebooks
+
+Each family has a final manual-review notebook with waveform, spectrogram, audio
+playback, human-QC intervals, objective selection provenance, and a persistent
+manual-verification CSV:
+
+| Family | Review notebook |
+|---|---|
+| QGAIN | `01_QGAIN/04_review_features.ipynb` |
+| QADD | `02_QADD/04_review_features.ipynb` |
+| QREV | `03_QREV/04_review_features.ipynb` |
+| QCHAN | `04_QCHAN/04_review_features.ipynb` |
+| QDIST | `05_QDIST/06_review_features.ipynb` |
+| QTEMP | `06_QTEMP/03_review_temporal_candidates.ipynb` |
+
+For QDIST and QTEMP, registered detector events are localized in red. The other
+families are recording-level estimands, so their objective cases are selected from
+prespecified feature extremes and no artificial event timestamp is invented. Human
+intervals are shown in blue. These reviews validate interpretability and failure
+modes; they do not replace the computational or scientific validation gates.
+
 ### Stage 03 — Dataset assembly
 
 After all family reviews/finalizations are complete, create the compact release:
