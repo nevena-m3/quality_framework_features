@@ -57,13 +57,22 @@ MAIN outputs/                    Authoritative freezes and reviewed features
 
 Generated outputs, participant data, local configuration, executed notebooks, archives, and media are excluded from Git. The GitHub repository contains the code and portable templates needed to reproduce the workflow, not protected study data or generated result bundles.
 
+
+## Stage 06 Ã¢â‚¬â€ External validation and final family audit
+
+The downstream audit notebooks in `notebooks/06_external_validation/` compare
+the reviewed indicators with prespecified external measures, inventory
+window/support evidence, and produce a human-signed feature-level verdict.
+External tools are comparators rather than ground truth, and this stage never
+edits frozen feature values in place. See
+`docs/EXTERNAL_VALIDATION_AND_FINAL_AUDIT_PLAN.md`.
 ## Requirements
 
 - Windows PowerShell is recommended because the freeze helpers are `.ps1` scripts.
 - Python 3.11 is the primary supported interpreter; Python 3.12 is also permitted by the package metadata.
 - FFmpeg and FFprobe must be installed and available on `PATH` unless explicit executable paths are supplied in the local configuration.
 - Sufficient disk space for decoded media, segmentation artifacts, feature candidates, figures, and immutable freezes.
-- Access to the study metadata, audio, and—when Goal 4 is required—human-QC annotation exports.
+- Access to the study metadata, audio, andâ€”when Goal 4 is requiredâ€”human-QC annotation exports.
 
 The Python dependencies include NumPy, pandas, SciPy, statsmodels, SoundFile, PyArrow, Matplotlib, seaborn, Silero VAD, ONNX Runtime, JupyterLab, and pytest. The optional `reverb` dependency installs `gammatone` for reverberation-related processing.
 
@@ -166,7 +175,7 @@ Recommended operating rules:
 
 ## End-to-end notebook guide
 
-### Stage 00 — Environment and data freeze
+### Stage 00 â€” Environment and data freeze
 
 | Order | Notebook | Purpose | Principal output / next decision |
 |---|---|---|---|
@@ -175,7 +184,7 @@ Recommended operating rules:
 
 Metadata adjudication is a manual gate. Investigator-confirmed exceptional control IDs belong in local configuration with evidence. Remaining cases are completed in `config/metadata_adjudication.csv`. Media must resolve to one decodable preferred path.
 
-### Stage 01 — Segmentation and boundary review
+### Stage 01 â€” Segmentation and boundary review
 
 | Order | Notebook | Purpose | Principal output / next decision |
 |---|---|---|---|
@@ -191,7 +200,7 @@ Important segmentation outputs include:
 
 A low boundary-contrast flag prompts inspection; it is not automatically an error and does not itself move a boundary.
 
-### Stage 02 — Reviewed feature extraction
+### Stage 02 â€” Reviewed feature extraction
 
 Run feature families in folder order. Within a family, run notebooks in numeric order. Each family writes mutable review-stage work beneath:
 
@@ -199,9 +208,9 @@ Run feature families in folder order. Within a family, run notebooks in numeric 
 MAIN outputs/02_FEATURE_REVIEWED/00_working_candidates/<feature_family>/
 ```
 
-Approved artifacts are published to numbered sibling directories such as `06_family_freezes`, `07_figure_packages`, and `08_validation_workbooks`. The family’s `support/` folder contains its reviewed scientific contract, checklist, decision record, audit, or workbook.
+Approved artifacts are published to numbered sibling directories such as `06_family_freezes`, `07_figure_packages`, and `08_validation_workbooks`. The familyâ€™s `support/` folder contains its reviewed scientific contract, checklist, decision record, audit, or workbook.
 
-#### 01_QGAIN — Recorded level and gain dynamics
+#### 01_QGAIN â€” Recorded level and gain dynamics
 
 | Notebook | What it does | Where to look |
 |---|---|---|
@@ -211,7 +220,7 @@ Approved artifacts are published to numbered sibling directories such as `06_fam
 
 After successful review, use `scripts/freeze_qgain_v410.ps1` and `scripts/freeze_qgain_figure_package_v100.ps1` as directed by the notebooks.
 
-#### 02_QADD — Additive interference
+#### 02_QADD â€” Additive interference
 
 | Notebook | What it does | Where to look |
 |---|---|---|
@@ -219,9 +228,9 @@ After successful review, use `scripts/freeze_qgain_v410.ps1` and `scripts/freeze
 | `02_extract_cohort.ipynb` | Runs the corrected cohort extraction, null calibration, support/robustness audits, empirical summaries, and non-imputed ML export. | `.../additive_interference/qadd-v4.2.0-candidate/` |
 | `03_finalize.ipynb` | Verifies the candidate, preserves numerical columns, applies final roles, completes validation records/passports, and prepares the freeze. | Final candidate under `additive_interference/`; publish with `scripts/freeze_qadd_v420.ps1`. |
 
-Use `scripts/freeze_qadd_figure_package_v100.ps1` for the approved figure package when the notebook’s review conditions are satisfied.
+Use `scripts/freeze_qadd_figure_package_v100.ps1` for the approved figure package when the notebookâ€™s review conditions are satisfied.
 
-#### 03_QREV — Reverberation and residual tails
+#### 03_QREV â€” Reverberation and residual tails
 
 | Notebook | What it does | Where to look |
 |---|---|---|
@@ -231,7 +240,7 @@ Use `scripts/freeze_qadd_figure_package_v100.ps1` for the approved figure packag
 
 Use `scripts/freeze_qrev_figure_package_v100.ps1` for the approved figure package.
 
-#### 04_QCHAN — Channel/device spectral effects
+#### 04_QCHAN â€” Channel/device spectral effects
 
 | Notebook | What it does | Where to look |
 |---|---|---|
@@ -241,19 +250,19 @@ Use `scripts/freeze_qrev_figure_package_v100.ps1` for the approved figure packag
 
 Use `scripts/freeze_qchan_figure_package_v100.ps1` for the approved figure package.
 
-#### 05_QDIST — Visible hard-plateau morphology
+#### 05_QDIST â€” Visible hard-plateau morphology
 
 | Notebook | What it does | Where to look |
 |---|---|---|
 | `01_remediation_preflight.ipynb` | Tests the corrected hard-plateau detector against synthetic and algebraic checks. Passing is not permission to freeze. | `.../00_working_candidates/nonlinear_distortion/qdist_v410_remediation_preflight/` |
 | `02_extract_candidate_cohort.ipynb` | Long-running native-audio cohort recomputation with checkpoints, parameter sensitivity, reconstruction, signal challenges, and blinded-review package generation. | `.../nonlinear_distortion/qdist_v410_candidate_cohort/` |
 | `03_verify_computational.ipynb` | Verifies hashes and known-truth/signal-evidence records, assigns deterministic decisions, and builds corrected validation panels without inventing human labels. | `.../qdist_v410_candidate_cohort/computational_verification_v1/` |
-| `04_human_review_optional.ipynb` | Optional adjudication after two independent reviewers complete every blinded item; reports agreement and disagreements but does not freeze. | The candidate cohort’s `blind_review/` and adjudication outputs. |
+| `04_human_review_optional.ipynb` | Optional adjudication after two independent reviewers complete every blinded item; reports agreement and disagreements but does not freeze. | The candidate cohortâ€™s `blind_review/` and adjudication outputs. |
 | `05_finalize.ipynb` | Performs automated reviewer-free reference validation, applies feature-role gates, and prepares the immutable measurement freeze. | Publish with `scripts/freeze_qdist_v410_r1.ps1` after all required gates pass. |
 
-The QDIST candidate-cohort run is restartable when its notebook’s `RESUME=True` contract is followed. Do not describe operational detector positives as human-confirmed clipping.
+The QDIST candidate-cohort run is restartable when its notebookâ€™s `RESUME=True` contract is followed. Do not describe operational detector positives as human-confirmed clipping.
 
-#### 06_QTEMP — Temporal discontinuity manifestations
+#### 06_QTEMP â€” Temporal discontinuity manifestations
 
 | Notebook | What it does | Where to look |
 |---|---|---|
@@ -283,7 +292,7 @@ prespecified feature extremes and no artificial event timestamp is invented. Hum
 intervals are shown in blue. These reviews validate interpretability and failure
 modes; they do not replace the computational or scientific validation gates.
 
-### Stage 03 — Dataset assembly
+### Stage 03 â€” Dataset assembly
 
 After all family reviews/finalizations are complete, create the compact release:
 
@@ -310,7 +319,7 @@ The `assemble` command rebuilds this compact release and consumes it directly.
 
 Investigate merge failures, duplicate keys, extraction failures, and unexpected task-completion missingness before analysis. Manuscript denominators should be generated from these outputs, never typed manually.
 
-### Stage 04 — Study analyses
+### Stage 04 â€” Study analyses
 
 | Order | Notebook | Purpose | Output folder |
 |---|---|---|---|
@@ -322,7 +331,7 @@ Investigate merge failures, duplicate keys, extraction failures, and unexpected 
 
 Some analysis notebooks consume intermediate tables produced by the package CLI, including descriptive, human-QC, segmentation-sensitivity, encoding-sensitivity, and Rest-reference outputs. If a required input is missing, run the corresponding upstream notebook or CLI stage rather than fabricating a placeholder.
 
-### Stage 05 — Standalone human-QC reliability
+### Stage 05 â€” Standalone human-QC reliability
 
 `notebooks/05_human_QC_reliability/Bamboo_RA_Interrater_Reliability_FULL.ipynb` evaluates:
 
@@ -342,7 +351,7 @@ Key files include `00_run_manifest.json`, inventories and coverage tables, event
 
 ## Understanding output locations
 
-### `outputs/` — mutable intermediate work
+### `outputs/` â€” mutable intermediate work
 
 This tree contains diagnostics, audit tables, per-recording processing artifacts, assembled data, and analytical results. It can be regenerated and is not committed.
 
@@ -360,7 +369,7 @@ outputs/04_analysis/                Study analyses and sensitivity results
 
 Most stages use `tables/` and `figures/` subdirectories. Manifests, logs, provenance, validation, and per-recording artifacts may appear where required by the stage contract.
 
-### `MAIN outputs/` — authoritative and reviewed artifacts
+### `MAIN outputs/` â€” authoritative and reviewed artifacts
 
 ```text
 MAIN outputs/
@@ -422,7 +431,7 @@ Available commands:
 | `broad-qc` | Run the legacy merged broad-metadata QC analysis. |
 | `human-qc` | Audit detailed annotations and run family-level alignment. |
 
-Use each command’s `--help` output for its exact arguments. The notebooks remain the recommended guided interface because they include scientific interpretation, visual checks, and explicit decisions around the underlying commands.
+Use each commandâ€™s `--help` output for its exact arguments. The notebooks remain the recommended guided interface because they include scientific interpretation, visual checks, and explicit decisions around the underlying commands.
 
 ## Validation and reproducibility
 
@@ -469,15 +478,15 @@ Do not create an empty substitute. Confirm that the upstream stage completed, it
 
 ### A freeze script refuses to publish
 
-This is intentional when tests, hashes, required files, gate states, or destination-safety checks fail. Review the candidate’s validation output and the family support contract. Do not bypass the check or copy candidate files manually into a freeze directory.
+This is intentional when tests, hashes, required files, gate states, or destination-safety checks fail. Review the candidateâ€™s validation output and the family support contract. Do not bypass the check or copy candidate files manually into a freeze directory.
 
 ### A candidate directory already exists
 
-Follow the notebook’s resume/overwrite contract. QDIST provides a content-addressed resume workflow. Other families may require a new version or deliberate removal/archival of an incomplete local candidate; never overwrite an approved freeze.
+Follow the notebookâ€™s resume/overwrite contract. QDIST provides a content-addressed resume workflow. Other families may require a new version or deliberate removal/archival of an incomplete local candidate; never overwrite an approved freeze.
 
 ### Human-QC coverage is lower than expected
 
-Verify rater folder names, the `Reliability/` layout, filename-to-recording resolution, duplicate exports, and the schema’s interval time base. Do not interpret distributed main ratings as a fully crossed design.
+Verify rater folder names, the `Reliability/` layout, filename-to-recording resolution, duplicate exports, and the schemaâ€™s interval time base. Do not interpret distributed main ratings as a fully crossed design.
 
 ### Results contain missing values
 

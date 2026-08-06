@@ -28,6 +28,10 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8,<9", "ruff>=0.5,<1", "jupyterlab>=4,<5", "nbclient>=0.10,<0.11"]
 reverb = ["gammatone==1.0.3"]
+audit = [
+  "librosa>=0.10.2,<0.12",
+  "pyloudnorm>=0.1.1,<0.2",
+]
 
 [project.scripts]
 paper1-qc = "paper1_qc.cli:main"
