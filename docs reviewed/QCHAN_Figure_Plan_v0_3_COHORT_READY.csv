@@ -1,0 +1,17 @@
+﻿panel,purpose,content,status,stem,required_artifacts
+A,Construct and dose response,Low-pass cutoffs; two-sided shelves; broad notches,PREFLIGHT_COMPLETE,A_construct_response,PNG/SVG/PDF/source/caption/provenance
+B,Discriminant specificity,HF/LF noise; HF-noise masking; coloration without attenuation; phenotype non-identifiability,PREFLIGHT_COMPLETE,B_discriminant_specificity,PNG/SVG/PDF/source/caption/provenance
+C,Transformation contract,"Gain, polarity, DC, time shift, source rate, FLAC/Opus/AAC",PREFLIGHT_COMPLETE,C_transformation_contract,PNG/SVG/PDF/source/caption/provenance
+D1,Target support and availability,Strict-speech duration/frame support and status,IMPLEMENTED_PENDING_COHORT_RUN,D1_target_support_availability,full bundle
+D2,Reference support and status,"Task strata, other-subject/recording counts, no-fallback missingness",IMPLEMENTED_PENDING_COHORT_RUN,D2_reference_support_status,full bundle
+D3,Native source bandwidth,"Sample rate/Nyquist, limited-source flags, feature availability",IMPLEMENTED_PENDING_COHORT_RUN,D3_native_bandwidth,full bundle
+E1,Window/boundary sensitivity,Frame/hop/guard and common-support changes,IMPLEMENTED_PENDING_COHORT_RUN,E1_window_boundary_sensitivity,full bundle
+E2,Reference sensitivity,"Delete-one subject, bootstrap, membership/vintage, recording-weighted alternative",IMPLEMENTED_PENDING_COHORT_RUN,E2_reference_robustness,full bundle
+E3,Estimator parameter sensitivity,"Floor, analysis band, high-band split, rolloff fraction, octave smoothing",IMPLEMENTED_PENDING_COHORT_RUN,E3_parameter_sensitivity,full bundle
+F,Empirical distributions,"Availability, one-sided zero mass, tails, outliers, support",IMPLEMENTED_PENDING_COHORT_RUN,F_empirical_distributions,full bundle
+G,Signal-linked examples,≥8 deterministic label-blind waveform/spectrogram/LTAS/reference/difference cases,IMPLEMENTED_PENDING_COHORT_RUN,G_signal_examples,full bundle per example + index
+H1,Repeated-recording persistence,Feature-specific paired/clustered persistence,IMPLEMENTED_PENDING_COHORT_RUN,H1_repeated_recordings,full bundle
+H2,Redundancy and signed precursors,Pairwise Spearman with n; signed vs truncated deficits,IMPLEMENTED_PENDING_COHORT_RUN,H2_redundancy,full bundle
+H3,Participant/reference weighting,Participant-balanced vs recording-weighted summaries and reference alternatives,IMPLEMENTED_PENDING_COHORT_RUN,H3_weighting,full bundle
+I,Event verification,No retained event detector,N/A,I_NA,explicit N/A record
+J,ML interface,Values + status/support/native bandwidth/reference hash; no imputation or scalar,IMPLEMENTED_PENDING_COHORT_RUN,J_ml_interface,full bundle

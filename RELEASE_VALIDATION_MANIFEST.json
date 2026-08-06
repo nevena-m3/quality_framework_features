@@ -1,0 +1,279 @@
+{
+  "release": "Remote_Speech_QC_Reviewed_Pipeline_Stage1_QGAIN",
+  "measurement_version": "qgain-v4.0.0-candidate",
+  "file_count_excluding_this_manifest": 52,
+  "package_tests": {
+    "passed": 16,
+    "failed": 0
+  },
+  "synthetic_notebook_execution": "completed_without_error",
+  "cohort_extraction": "not_run_raw_audio_unavailable",
+  "publication_freeze_created": false,
+  "blocking_open_items": [
+    "local cohort G6-G8",
+    "official ITU-T P.56 comparator",
+    "scientific G10 acceptance"
+  ],
+  "files": [
+    {
+      "path": "MAIN outputs reviewed/00_feature_registry/master_feature_registry_v1_1_working.csv",
+      "bytes": 8801,
+      "sha256": "97fd01a84b33110d2a804f5afea8f441f4ea93fffbdf9e75e01c5353d8bc9a11"
+    },
+    {
+      "path": "MAIN outputs reviewed/00_feature_registry/master_feature_registry_v1_1_working.json",
+      "bytes": 16294,
+      "sha256": "92c514fddd23c961bbad95d1a07be3c89f87affede9933737e0062a0bd4291a2"
+    },
+    {
+      "path": "MAIN outputs reviewed/00_feature_registry/qgain_v400_feature_registry.csv",
+      "bytes": 3967,
+      "sha256": "cab213d16c5ccafebaaf4f9bb83281a4376c536d0588190a8c151a99eeee8ed1"
+    },
+    {
+      "path": "MAIN outputs reviewed/00_feature_registry/qgain_v400_feature_registry.json",
+      "bytes": 5939,
+      "sha256": "1de63ce2629224941ffefd088c6f3d1199ef136678da6d261946f5d7bf09a868"
+    },
+    {
+      "path": "MAIN outputs reviewed/01_analysis_features/README.md",
+      "bytes": 110,
+      "sha256": "ade3cf4b92ece2c8acc7516f7a592564d40fb5821f41416b74b1c46def5fc622"
+    },
+    {
+      "path": "MAIN outputs reviewed/02_support_and_availability/README.md",
+      "bytes": 110,
+      "sha256": "ade3cf4b92ece2c8acc7516f7a592564d40fb5821f41416b74b1c46def5fc622"
+    },
+    {
+      "path": "MAIN outputs reviewed/04_model_ready_features/README.md",
+      "bytes": 110,
+      "sha256": "ade3cf4b92ece2c8acc7516f7a592564d40fb5821f41416b74b1c46def5fc622"
+    },
+    {
+      "path": "MAIN outputs reviewed/05_feature_passports/QGAIN_v400_feature_passport.csv",
+      "bytes": 3967,
+      "sha256": "cab213d16c5ccafebaaf4f9bb83281a4376c536d0588190a8c151a99eeee8ed1"
+    },
+    {
+      "path": "MAIN outputs reviewed/06_family_freezes/README.md",
+      "bytes": 110,
+      "sha256": "ade3cf4b92ece2c8acc7516f7a592564d40fb5821f41416b74b1c46def5fc622"
+    },
+    {
+      "path": "QGAIN_STAGE1_IMPLEMENTATION_REPORT.md",
+      "bytes": 4633,
+      "sha256": "15e17ea44aadb43bf81a1cadb4426972a907b1befb3b6f857503b4199f10d222"
+    },
+    {
+      "path": "README_START_HERE.md",
+      "bytes": 1603,
+      "sha256": "1c7c5f80e8ae2c52e1fce979bcab42273bded99340dbf45844279945626aaee0"
+    },
+    {
+      "path": "REVIEWED_STAGE1_MANIFEST.json",
+      "bytes": 722,
+      "sha256": "79f0b9f87fc8e3037caf4ba12c8a2d10324ca9117065cbfe560b99ca13b6f45b"
+    },
+    {
+      "path": "notebooks reviewed/00_shared_governance/README.md",
+      "bytes": 426,
+      "sha256": "5db05cc0fef486733617920202dfb18a84c96762fb7a294562eec041954bb0fb"
+    },
+    {
+      "path": "notebooks reviewed/00_shared_governance/REVIEWED_OUTPUT_CONTRACT.md",
+      "bytes": 1317,
+      "sha256": "90e7eb153097c88d4bba7d8e9449b8c69a0ed9424eaf1ced4a2467ae2b57ffcc"
+    },
+    {
+      "path": "notebooks reviewed/01_QGAIN/02b_gain_dynamics_QGAIN_v4_0_0_REVIEWED_EXECUTED_SYNTHETIC.ipynb",
+      "bytes": 179817,
+      "sha256": "6d983350566b9ede878f6ae1535c67337770a7f462ff2a11750a30a038ee1aa3"
+    },
+    {
+      "path": "notebooks reviewed/01_QGAIN/02b_gain_dynamics_QGAIN_v4_0_0_REVIEWED_SOURCE.ipynb",
+      "bytes": 64232,
+      "sha256": "98809450ad9ec108a04fd929fdb52a92384d91d27b77c7b29e7292952aca5b2b"
+    },
+    {
+      "path": "notebooks reviewed/01_QGAIN/QGAIN_V31_TO_V400_CHANGELOG.md",
+      "bytes": 1273,
+      "sha256": "146abedd13a17f958ef3893795abde77504c6efa73cce14d41831c8fd7a9bf3b"
+    },
+    {
+      "path": "notebooks reviewed/01_QGAIN/QGAIN_V4_0_0_SCIENTIFIC_CONTRACT.md",
+      "bytes": 6089,
+      "sha256": "c6a38f9dcb86de4aced189728c947291d9110a571b43b18f25140e978ea84d20"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/README.md",
+      "bytes": 110,
+      "sha256": "ade3cf4b92ece2c8acc7516f7a592564d40fb5821f41416b74b1c46def5fc622"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/README.md",
+      "bytes": 506,
+      "sha256": "84fb611bbbb4e97b3b17dadf5d2fbc24bf955ac4be1d9d64f9739309fcafabf5"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/figures/qgain_v400_g4_dose_response.png",
+      "bytes": 91424,
+      "sha256": "4861adeadf4bc01967a8bd39b3e3d24ac7ce02a07d77e3a6e1fe5034d1be72fc"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/manifests/qgain_v400_candidate_manifest.json",
+      "bytes": 1742,
+      "sha256": "4b4ccedc34f3ad8d961ada20bebf8742ba6a496bb303ab8633bc2a21aa3e99c4"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/tables/qgain_v400_feature_registry.csv",
+      "bytes": 3967,
+      "sha256": "cab213d16c5ccafebaaf4f9bb83281a4376c536d0588190a8c151a99eeee8ed1"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/tables/qgain_v400_parameters.csv",
+      "bytes": 678,
+      "sha256": "a8dbaa7d1982251b93d4e609eb1396473fd1fc7b9fe1187f80357441a21d6671"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/validation/qgain_v400_g10_checks.csv",
+      "bytes": 114,
+      "sha256": "10c6e05b45d6981fb6f70e5c0dacbdad316ec226b0ce121f53dc2b916af9f284"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/validation/qgain_v400_g10_feature_decisions.csv",
+      "bytes": 498,
+      "sha256": "8cabc35ec1b28a1469d16bb51119e061f5edd21e0fab8ed914aa43783aebcd0b"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/validation/qgain_v400_g1_contract_checks.csv",
+      "bytes": 317,
+      "sha256": "afea88a6b7eaa1a8013ec9a7e4fe7af05429771de86bc547c9ff2a67992e6c48"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/validation/qgain_v400_g1_input_checks.csv",
+      "bytes": 319,
+      "sha256": "4c30390b91b4244e4b3dd0b7dfa70da77d7c5e8696db149e6c776dfcf0aaa9e3"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/validation/qgain_v400_g1_input_contract.csv",
+      "bytes": 639,
+      "sha256": "1bc4ed0890f5088c26b7763452996b2ad1bd398f985a4b73e6fc324a69dc2863"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/validation/qgain_v400_g2_numerical_checks.csv",
+      "bytes": 156,
+      "sha256": "3cbf4e4d76bc207d0831831909b9ef9d4385606eb67520e13fe306dc34ea23e9"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/validation/qgain_v400_g3_checks.csv",
+      "bytes": 426,
+      "sha256": "340256b9b0f26e53f701cefea20b2bed4c05ef9e8de5991b241c7c28c49bba8e"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/validation/qgain_v400_g3_codec_roundtrip.csv",
+      "bytes": 782,
+      "sha256": "62455e7b43bfd40633d788251eb0698efb83e333d17ba7c28d6dde7bfd16cd35"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/validation/qgain_v400_g3_resampling_sensitivity.csv",
+      "bytes": 633,
+      "sha256": "8c865a99c158b7eb36ea804c03be427981b3446b9a9cbeee3a6a1ebd30d3ef35"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/validation/qgain_v400_g3_transform_controls.csv",
+      "bytes": 919,
+      "sha256": "e3f10ac74fc7816f6dcff3f0836209e6f4b466273c2bb032fd3f9d0ea9f1d16e"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/validation/qgain_v400_g4_checks.csv",
+      "bytes": 146,
+      "sha256": "346d485b499a2cd6d4511ce5a5021989c6d24e17368bdc625dd3b51bd580af6f"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/validation/qgain_v400_g4_dose_response.csv",
+      "bytes": 587,
+      "sha256": "d3f4a00ecb0d81f5efbac91fc4d893e2d42542b21dd907fb7241c983f33e741b"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/validation/qgain_v400_g5_checks.csv",
+      "bytes": 268,
+      "sha256": "7cfe43a64efedd73ff7340cec2adc328a08706e34e88d07d14c6cb888b6704e9"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/validation/qgain_v400_g5_nonidentifiability_demo.csv",
+      "bytes": 325,
+      "sha256": "02ad52ea2e88f52597e455627e680c4cd7006600bf9e908493f85946eeb9e748"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/validation/qgain_v400_g6_checks.csv",
+      "bytes": 367,
+      "sha256": "94d22dc4f2afe3dd24b152fadb1046772fa38e123e59b10404d7f69f35443d5d"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/validation/qgain_v400_g6_cohort_checks.csv",
+      "bytes": 87,
+      "sha256": "fd62882153cc9b28cd9c4e69c634d7f17c38d62e72adb93078ae002ea4defac0"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/validation/qgain_v400_g6_floor_grid.csv",
+      "bytes": 264,
+      "sha256": "b84075649ff40529909efcdae4edd557c138f887a90c6c723ad41ff11dc3fc87"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/validation/qgain_v400_g6_guard_grid.csv",
+      "bytes": 748,
+      "sha256": "75279b7200fc721ebd3b81bbb766909ce49f0aeac68aa3af34d1f40d1bb592e2"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/validation/qgain_v400_g6_segment_count_span_grid.csv",
+      "bytes": 910,
+      "sha256": "84b088f44a39905bbf32b42a64d3a0e2e0f2b99a835c31056e6a0e56c9fb8f79"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/validation/qgain_v400_g6_support_grid.csv",
+      "bytes": 1420,
+      "sha256": "dab5c0fa1ff3811a45bc95b2c936c953fbe97ae0e9452abbc83391d7fc7459d3"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/validation/qgain_v400_g7_checks.csv",
+      "bytes": 92,
+      "sha256": "ca5530f4e520ba39fcc058884d8d4c792022aefac468e53d8e3c1b9a913c8c85"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/validation/qgain_v400_g8_checks.csv",
+      "bytes": 82,
+      "sha256": "8a2ba0c88e1db18f83ae4ce8b0b35ac9664d985e594c47f8d4971faf454c4190"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/validation/qgain_v400_g9_checks.csv",
+      "bytes": 84,
+      "sha256": "b86a347e2f2d31a62cf1d4fc35a3af84586c0d198e16c149a948a699820bf9ab"
+    },
+    {
+      "path": "outputs reviewed/gain_dynamics/qgain-v4.0.0-candidate/preflight_reference/validation/qgain_v400_gate_summary.csv",
+      "bytes": 2565,
+      "sha256": "db60fedc8c3d2eeeb06f5ea617419ee16c99202cb87a2cbdb94b8677c2b10c03"
+    },
+    {
+      "path": "scripts reviewed/generate_qgain_v400_notebook.py",
+      "bytes": 429,
+      "sha256": "dc39cdc0c989b1c7bbe43a63a66680282b6d8e97a9bee7cad6a6244214885ef5"
+    },
+    {
+      "path": "src reviewed/paper1_qc_reviewed/__init__.py",
+      "bytes": 53,
+      "sha256": "af2e1e9dc678cc799f674911dbcd56c15d5240d0fe8ef02ed6b32eb3241cb553"
+    },
+    {
+      "path": "src reviewed/paper1_qc_reviewed/qgain_v400.py",
+      "bytes": 33759,
+      "sha256": "82ee7654b8c315fd51faf1c46fd0e0cd2be75a4a06b0c5fbf74559db105e980e"
+    },
+    {
+      "path": "tests reviewed/test_qgain_v400.py",
+      "bytes": 7480,
+      "sha256": "ff423803df3404e45b34eccb698a510b40c833d8514514b48aec7b68ab35fd73"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "measurement_version": "qdist-v3.1.0",
+  "package_tests": {
+    "passed": 67,
+    "failed": 0,
+    "command": "PYTHONPATH=src pytest tests/test_qdist_v30.py tests/test_qdist_notebook_v300.py -q"
+  },
+  "controlled_validation": {
+    "formula_transform_checks_passed": 6,
+    "synthetic_construct_checks_passed": 5,
+    "discriminant_checks_passed": 6,
+    "transformation_checks_passed": 3,
+    "sample_precision_median": 1.0,
+    "moderate_severe_sample_recall_range": [0.84263, 0.939864],
+    "realistic_pcm16_null_conditions": 64,
+    "false_detections_in_null_grid": 0
+  },
+  "r4_gallery_recheck": {
+    "items": 16,
+    "expected_outcomes_passed": 16,
+    "real_false_positive_or_rejected_items_rejected_or_unavailable": 10,
+    "synthetic_hard_clip_positives_detected": 3,
+    "synthetic_clean_peak_negatives_rejected": 3
+  },
+  "full_frozen_cohort_v310_run_completed_here": false,
+  "reason": "Frozen local cohort media are not available in this execution environment."
+}

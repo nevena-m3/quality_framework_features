@@ -1,0 +1,11 @@
+domain_number,domain,status,scientific_conclusion
+1,Construct validity,CONDITIONAL,"QTEMP measures observable decoded-waveform temporal discontinuity patterns; it does not identify packet loss, network failure, buffering, concealment, missing speech, or a physiological cause. Dropout-like events remain ambiguous at natural pause boundaries."
+2,Estimator validity,PASS,"The four preserved outputs reconstruct deterministically from frozen event ledgers and eligible exposure; valid zero, unavailable status, duration burden, and event frequency remain distinct."
+3,Implementation validity,PASS,"The native decoded signal view, channel handling, preprocessing order, parameters, tests, media provenance, and immutable artifact hashes are pinned and verified."
+4,Transformation behavior,PASS,"Registered gain, polarity, common-time-shift, native-view, and sample-rate behavior is characterized; unsupported signal-chain equivalence claims are prohibited."
+5,Target recovery,PASS_WITH_SCOPE_LIMIT,"Synthetic and participant-disjoint real-speech injections recover registered dropout-like and near-exact repetition targets, but this validates controlled observables rather than real-world physical causes."
+6,Discriminant validity,CONDITIONAL,"Pause boundaries, stop closures, ordinary silence, periodic speech, and other natural speech structure limit construct specificity; the splice-discontinuity estimator failed held-out real-speech validation and was dropped."
+7,Support and uncertainty,PASS_WITH_QUALIFICATION,"All 519 recordings and 224 participants are represented; only 2 recordings are dropout-positive and none are frozen-positive, so positive empirical support is sparse or absent."
+8,Reliability and redundancy,CONDITIONAL,"Exact reconstruction is established, but repeated-recording persistence is zero-dominated and duration/rate pairs are same-ledger summaries rather than independent evidence."
+9,Event verification,N/A,"No QTEMP event detector is retained in the validated primary feature set; G9 is therefore not applicable, not failed or pending."
+10,Scientific scope and handoff,FINALIZED_NO_PRIMARY_FEATURES,"Zero QTEMP features enter the validated primary set. Two dropout summaries are exploratory descriptive outputs, two frozen-audio summaries are monitoring-only zero-variation outputs, and splice is dropped."

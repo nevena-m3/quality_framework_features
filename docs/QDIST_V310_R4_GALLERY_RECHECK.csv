@@ -1,0 +1,17 @@
+review_id,legacy_review_type,expected_positive_for_v310,v310_status,v310_event_count,v310_plateau_count,v310_detected_positive,pass
+QDIST_REVIEW_001,accepted_real_event,False,ok,0.0,0.0,False,True
+QDIST_REVIEW_002,accepted_real_event,False,ok,0.0,0.0,False,True
+QDIST_REVIEW_003,accepted_real_event,False,unavailable_low_entropy_native_waveform,,,False,True
+QDIST_REVIEW_004,accepted_real_event,False,ok,0.0,0.0,False,True
+QDIST_REVIEW_005,accepted_real_event,False,ok,0.0,0.0,False,True
+QDIST_REVIEW_006,matched_rejected_real_candidate,False,ok,0.0,0.0,False,True
+QDIST_REVIEW_007,matched_rejected_real_candidate,False,ok,0.0,0.0,False,True
+QDIST_REVIEW_008,matched_rejected_real_candidate,False,ok,0.0,0.0,False,True
+QDIST_REVIEW_009,matched_rejected_real_candidate,False,ok,0.0,0.0,False,True
+QDIST_REVIEW_010,matched_rejected_real_candidate,False,ok,0.0,0.0,False,True
+QDIST_REVIEW_011,synthetic_hard_clip_positive_control,True,ok,1.0,15.0,True,True
+QDIST_REVIEW_012,synthetic_hard_clip_positive_control,True,ok,1.0,27.0,True,True
+QDIST_REVIEW_013,synthetic_hard_clip_positive_control,True,ok,1.0,34.0,True,True
+QDIST_REVIEW_014,synthetic_clean_peak_negative_control,False,ok,0.0,0.0,False,True
+QDIST_REVIEW_015,synthetic_clean_peak_negative_control,False,ok,0.0,0.0,False,True
+QDIST_REVIEW_016,synthetic_clean_peak_negative_control,False,ok,0.0,0.0,False,True

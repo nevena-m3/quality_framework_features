@@ -1,0 +1,12 @@
+raw_estimate,stored,reconstructed,absolute_difference,pass
+qadd_pause_ac_level_dbfs_median_raw_estimate,-50.030395978924886,-50.030395978924886,0.0,True
+qadd_pause_level_iqr_db_raw_estimate,0.3928214710216693,0.3928214710216693,0.0,True
+qadd_speech_pause_level_contrast_db_raw_estimate,30.095349772956848,30.095349772956848,0.0,True
+qadd_pause_spectral_flatness_raw_estimate,0.5650748036854234,0.5650748036854234,0.0,True
+qadd_mains_hum_comb_score_db_raw_estimate,3.1134072067970644,3.1134072067970644,0.0,True
+qadd_mains_hum_score_50_db_raw,3.1134072067970644,3.1134072067970644,0.0,True
+qadd_mains_hum_score_60_db_raw,-0.6744126849846597,-0.6744126849846597,0.0,True
+qadd_mains_hum_winner_hz,50.0,50.0,0.0,True
+qadd_mains_hum_supported_harmonic_count_median,1.0,1.0,0.0,True
+qadd_pause_ac_level_dbfs_median_floor_inclusive,-50.030395978924886,-50.030395978924886,0.0,True
+qadd_pause_level_iqr_db_floor_inclusive,0.3928214710216693,0.3928214710216693,0.0,True

@@ -1,0 +1,5 @@
+feature,label,subdomain,role,unit,orientation,decision,status
+qchan_ltas_distance_db,Reference-relative LTAS distance,spectral coloration/deviation,primary nonordinal,dB RMS,Higher = more cohort-relative spectral deviation; not intrinsically worse,RETAIN_CANDIDATE_PRIMARY_NONORDINAL,pending cohort G7–G8
+qchan_rolloff95_deficit_hz,Reference-relative rolloff-95 deficit,bandwidth attenuation,primary,Hz,Higher = greater one-sided reduction in upper spectral extent,RETAIN_CANDIDATE_PRIMARY,pending cohort G7–G8
+qchan_highband_ratio_deficit,Reference-relative high-band deficit,bandwidth attenuation,secondary,proportion,Higher = lower 3–7.5-kHz energy share relative to reference,RETAIN_CANDIDATE_SECONDARY,pending cohort G7–G8
+qchan_tilt_steepening_db_per_oct,Reference-relative spectral-tilt steepening,spectral coloration,secondary,dB/octave,Higher = steeper downward tilt than reference; phenotype-sensitive,RETAIN_CANDIDATE_SECONDARY,pending cohort G7–G8

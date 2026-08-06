@@ -1,0 +1,5 @@
+feature,legacy_status,provisional_reviewed_decision,proposed_role,reason
+qrev_tail_excess_100ms_db,INVALID_RECOMPUTE,REVISE_RETAIN_CANDIDATE,primary conditional,"Construct is coherent, but legacy first 100 ms began 50 ms inside primary speech. Recompute from primary offsets."
+qrev_tail_persistence_median_sec,INVALID_REDEFINE_RECOMPUTE,REDEFINE_RETAIN_CANDIDATE,primary conditional censored,Legacy 1.0-s horizon overlapped 0.7-1.0-s floor. Reviewed candidate uses independent 0.6-s horizon.
+qrev_downward_decay_rate_db_per_sec,INVALID_RECOMPUTE,REVISE_RETAIN_CANDIDATE,secondary conditional,"Negative-only robust slope is defensible, but values require corrected primary offsets and sensitivity review."
+qrev_srmr_norm,LINEAGE_ONLY_REVERIFY,RETAIN_PINNED_COMPARATOR_PENDING_VALIDATION,secondary established comparator,"Published metric with pinned implementation; must pass exact runtime, RIR, noise, codec, bandwidth, and duration checks."

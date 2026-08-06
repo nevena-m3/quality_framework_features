@@ -1,2 +1,0 @@
-[console_scripts]
-paper1-qc = paper1_qc.cli:main

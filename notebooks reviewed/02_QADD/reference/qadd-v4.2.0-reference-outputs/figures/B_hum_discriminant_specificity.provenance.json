@@ -1,0 +1,6 @@
+{
+  "measurement_version": "qadd-v4.2.0-candidate",
+  "figure": "B_hum_discriminant_specificity",
+  "source_data": "B_hum_discriminant_specificity.source.csv",
+  "evidence_type": "independent synthetic null and discriminant suite"
+}

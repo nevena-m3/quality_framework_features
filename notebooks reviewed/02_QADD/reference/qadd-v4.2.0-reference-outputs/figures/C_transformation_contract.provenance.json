@@ -1,0 +1,6 @@
+{
+  "measurement_version": "qadd-v4.2.0-candidate",
+  "figure": "C_transformation_contract",
+  "source_data": "C_transformation_contract.source.csv",
+  "evidence_type": "synthetic deterministic transformation controls"
+}

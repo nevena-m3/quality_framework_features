@@ -1,0 +1,11 @@
+domain_number,domain,status,scientific_conclusion
+1,Construct validity,PASS,Observable post-offset residual and modulation-smearing manifestations are measured without room-parameter claims.
+2,Estimator validity,PASS,"Signed tail excess, bounded persistence, conditional decay and pinned SRMR measure their stated observables and reconstruct from saved evidence."
+3,Implementation validity,PASS,"Natural primary-speech offsets, independent late floors, global DC removal, exact media hashes and pinned SRMR identity are verified."
+4,Transformation behavior,PASS,"Gain, polarity, DC, common shift, source-rate, codec and duration behavior satisfy the declared contracts."
+5,Dose response,PASS,"RIR-dose, known-persistence and exponential-decay simulations show expected responses in the declared operating range."
+6,Discriminant validity,CONDITIONAL,"Breathing, residual articulation, changing noise floors, delayed echo and additive noise remain plausible confounds or non-identifiable alternatives."
+7,Support and uncertainty,CONDITIONAL,"Support, censoring and missingness are explicit. The 2/3/4 classes describe evidence quantity, not calibrated precision."
+8,Reliability and robustness,CONDITIONAL,"Tail excess, persistence and SRMR show moderate repeated-recording persistence; decay is sparse and more parameter-sensitive."
+9,Interpretability,PASS,"Units, orientations, conditional availability, censoring and non-independence are explicit."
+10,Scientific scope,PASS,"No scalar, room-parameter estimate, event detector, standalone reject gate or operational threshold is authorized."

@@ -1,0 +1,1 @@
+Controlled QADD construct response for pause level, mixed speech-pause contrast, pause-level nonstationarity, and spectral type. The flatness panel uses broadband/colored noise and an in-band 437-Hz tone; 50/60-Hz structure is evaluated separately by the hum-comb detector.

@@ -1,0 +1,11 @@
+gate,status,evidence
+G1,PASS,"construct, prohibited claims, four-feature registry, canonical waveform, reference identity and no scalar"
+G2,PASS,"formula tests, exact self-reference zeros, signed precursors, missing-not-zero and 519-recording reconstruction"
+G3,PASS,"gain, polarity, DC, time shift, source-rate and codec characterization"
+G4,PASS,ordered low-pass dose response plus shelf and notch coloration controls
+G5,CONDITIONAL,"noise, phonetic, physiological and source non-identifiability explicitly retained"
+G6,PASS_WITH_QUALIFICATION,"target, parameter, reference membership, bootstrap, vintage and weighting sensitivity complete; estimator definitions remain part of identity"
+G7,PASS_WITH_QUALIFICATION,"519 recordings, 224 participants, complete support/hashes, empirical distributions and eight linked examples; source-rate group structure remains contextual"
+G8,PASS_WITH_QUALIFICATION,"participant-bootstrap confidence intervals, repeat persistence, redundancy and weighting analyses; high-band is secondary and tilt exploratory"
+G9,N/A,no retained QCHAN event detector or device classifier
+G10,PASS,"feature-specific roles accepted, no scalar/gate, corrected audit figures, exact numerical equivalence and separate atomic freezes"

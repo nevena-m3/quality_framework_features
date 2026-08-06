@@ -27,6 +27,17 @@ class AudioViews:
     decode_stderr: str
 
 
+
+@dataclass
+class NativeAudio:
+    """Native-rate decoded multichannel audio without analysis-view transforms."""
+
+    native: np.ndarray  # shape: samples x channels, raw decoded scale
+    sample_rate_native: int
+    probe: dict
+    decode_stderr: str
+
+
 def discover_media(paths: Iterable[str | Path]) -> list[Path]:
     files: list[Path] = []
     for raw in paths:
@@ -103,25 +114,29 @@ def probe_media(path: str | Path, ffprobe: str) -> dict:
     return result
 
 
-def decode_audio_views(
+def decode_native_audio(
     path: str | Path,
     *,
     ffmpeg: str,
     ffprobe: str,
-    analysis_rate: int = 16000,
-) -> AudioViews:
-    """Decode native channels before creating a separate 16-kHz analysis view.
+) -> NativeAudio:
+    """Decode the first audio stream at its native rate with channels preserved.
 
-    No peak normalization, dynamic-range processing, clipping, or level scaling is applied.
-    Quality metrics that depend on digital full scale must use ``native``/``mono_native``.
+    This path intentionally performs no mono reduction, DC removal, resampling,
+    normalisation, filtering, interpolation, or codec re-encoding.  It is the
+    efficient authoritative input for native-waveform families such as QDIST
+    and QTEMP.
     """
+
     probe = probe_media(path, ffprobe)
     if not probe.get("probe_ok"):
         raise RuntimeError(f"ffprobe failed for {path}: {probe.get('probe_error')}")
     sample_rate = int(probe["sample_rate_hz"])
     channels = int(probe["channels"])
     if sample_rate <= 0 or channels <= 0:
-        raise ValueError(f"Invalid native stream geometry for {path}: {sample_rate=} {channels=}")
+        raise ValueError(
+            f"Invalid native stream geometry for {path}: {sample_rate=} {channels=}"
+        )
 
     cmd = [
         ffmpeg,
@@ -149,6 +164,26 @@ def decode_audio_views(
     native = flat.reshape(-1, channels).astype(np.float32, copy=False)
     if not np.isfinite(native).all():
         raise RuntimeError(f"Decoded waveform contains NaN/Inf: {path}")
+    return NativeAudio(native, sample_rate, probe, stderr)
+
+
+def decode_audio_views(
+    path: str | Path,
+    *,
+    ffmpeg: str,
+    ffprobe: str,
+    analysis_rate: int = 16000,
+) -> AudioViews:
+    """Decode native channels before creating a separate 16-kHz analysis view.
+
+    No peak normalization, dynamic-range processing, clipping, or level scaling is applied.
+    Quality metrics that depend on digital full scale must use ``native``/``mono_native``.
+    """
+    decoded = decode_native_audio(path, ffmpeg=ffmpeg, ffprobe=ffprobe)
+    native = decoded.native
+    sample_rate = decoded.sample_rate_native
+    probe = decoded.probe
+    stderr = decoded.decode_stderr
     mono_native = native.mean(axis=1, dtype=np.float64).astype(np.float32)
     mono_dc = mono_native - float(np.mean(mono_native, dtype=np.float64))
 

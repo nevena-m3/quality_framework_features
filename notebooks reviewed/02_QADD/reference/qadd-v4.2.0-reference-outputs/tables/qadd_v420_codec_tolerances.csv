@@ -1,0 +1,6 @@
+feature,tolerance
+qadd_pause_ac_level_dbfs_median,1.0
+qadd_pause_level_iqr_db,0.5
+qadd_speech_pause_level_contrast_db,0.75
+qadd_pause_spectral_flatness,0.03
+qadd_mains_hum_comb_score_db,1.5

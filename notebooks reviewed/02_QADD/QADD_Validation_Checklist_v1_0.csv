@@ -1,0 +1,50 @@
+gate,domain,check,status,evidence,reviewer_conclusion
+G1,Construct/provenance,Artifact family and observable claim are explicitly defined,PASS,Scientific contract,"QADD measures recorded pause energy and selected spectral structure, not unique sources."
+G1,Provenance,All frozen inputs exist and are SHA-256 identified,PASS,3 frozen artifacts hashed,Input identity is auditable.
+G1,Intervals,Eligible recording identities match frozen cohort,PASS,519/519,No cohort drift.
+G1,Intervals,Canonical primary/strict speech available for every recording,PASS,519/519,Speech support is complete.
+G1,Intervals,Strict pause absence remains absence,PASS,6 recordings have no strict pause,No silent synthesis.
+G1,Preprocessing,Already-guarded intervals are not guarded twice,PASS,speech/pause guard flags verified,Corrected legacy duplicate speech erosion.
+G1,Media,Local media hashes match frozen hashes,PASS,519/519,Correct waveform identity.
+G2,Numerics,AC-RMS and dBFS primitives match hand-computable controls,PASS,Sine RMS and dBFS exact,Primitive implementation correct.
+G2,Reconstruction,All raw estimands reconstruct from saved ledgers,PASS,0 reconstruction errors,Recording values are auditable.
+G2,Hum bookkeeping,Winning comb and supported-harmonic companion are frequency-consistent,PASS,winner-specific support column,Corrected legacy mismatch.
+G2,Missingness,Unavailable values remain NaN,PASS,All five features checked,Missing is not zero.
+G3,Transformation,Pause level is gain-equivariant,PASS,<1e−8 dB error,Expected 1:1 shift.
+G3,Transformation,Relative/shape features are gain-invariant,PASS,<1e−8,Expected invariance.
+G3,Transformation,"Polarity, DC, and common time shift contracts hold",PASS,All prespecified checks pass,No irrelevant dependence.
+G3,Resampling,Resampling sensitivity is within tolerance,PASS,Prespecified ratios pass,Comparable analysis view is stable.
+G3,Codec,Lossless and lossy codec controls are characterized,PASS,All tolerance ratios ≤1,"Codec behavior is bounded, not ignored."
+G4,Dose response,Pause level follows injected pause-noise level,PASS,Spearman >0.99,Correct target response.
+G4,Dose response,Contrast decreases with pause-noise dose,PASS,Spearman <−0.99,Correct mixed contrast response.
+G4,Factorial,Contrast rises with speech gain and falls with pause noise,PASS,All strata |rho|>0.99,Confirms mixed speech/pause dependence.
+G4,Dose response,Pause IQR rises with amplitude modulation,PASS,Spearman 1.0,Correct nonstationarity response.
+G4,Spectral,"Flatness separates broadband, colored, and tonal controls",PASS,White > pink/brown/tone,Correct descriptor behavior.
+G4,Hum,Hum score rises with 50/60-Hz comb dose,PASS,Both rho>0.95,Correct targeted response.
+G5,Specificity,Colored/AM noise joint hum false-positive rate,PASS,0.0,Within prespecified bound.
+G5,Specificity,Off-grid comb and single-tone false positives,PASS,0.0 / 0.0,Within prespecified bounds.
+G5,Specificity,Generic breath/competing-speech controls do not trigger hum evidence,PASS,0.0,Hum detector is structurally specific in tested controls.
+G5,Claim boundary,Competing-talker identity remains unresolved,CONDITIONAL,Generic additive-energy response only,No source-identity claim.
+G5,Claim boundary,Exact low-F0 periodic source can mimic hum comb,CONDITIONAL,voiced_like_f0_60,Irreducible no-reference confound.
+G6,Support,Minimum support and precision tiers are explicit,PASS,Feature-specific support tiers,Support is part of the measurement.
+G6,Floor,Floor-censored values are withheld with raw companions,PASS,17 level-censored recordings,Avoids false low-noise interpretation.
+G6,Hum null,Null calibration matches observed valid-window counts,PASS,41 exact support counts,No fixed eight-window shortcut.
+G6,Hum null,Null P95 is conservatively non-increasing with support,PASS,Monotonic adjusted grid,No threshold is lowered.
+G6,Robustness,Whole-pause deletion audit covers all features,PASS,5 features; 0 errors,Sensitivity is quantified.
+G6,Robustness,Boundary perturbation audit covers pause and speech contracts,PASS,15 feature-condition rows,Fixed contract is justified.
+G6,Robustness,Pause IQR and hum upper-tail sensitivity is acknowledged,CONDITIONAL,P90 relative changes 0.65 and 0.42,Support tiers are mandatory.
+G7,Cohort,Availability and status distributions are explicit,PASS,41.0–89.0% availability,Conditional measurements are transparent.
+G7,Cohort,Empirical values are finite or missing,PASS,All five features,No infinite outputs.
+G7,Cohort,"Spectral flatness stays within [0,1]",PASS,All available values,Mathematical range holds.
+G7,Cohort,Hum joint-evidence prevalence is reported separately,PASS,11/213 = 5.16%,Raw descriptor is not conflated with evidence threshold.
+G7,Figures,Panels A–H/J and signal-linked examples exist,PASS,Required panels complete,Evidence is auditable.
+G8,Persistence,Repeat persistence is reported for all retained features,PASS,5/5,Stability is quantified.
+G8,Persistence,Low hum persistence is interpreted as conditional/intermittent,CONDITIONAL,Spearman 0.21; ICC 0.36,Not treated as a universal stable trait.
+G8,Weighting,Participant-balanced resampling completed,PASS,1000 iterations / 5000 feature draws,Recording weighting is audited.
+G8,Redundancy,All unique within-family correlations are reported,PASS,10 pairs,Redundancy is not assumed.
+G8,Redundancy,Pause level and contrast near-redundancy is handled,CONDITIONAL,Spearman −0.919,Contrast retained for gain invariance but not independent evidence.
+G9,Event adjudication,Retained event detector requires blinded adjudication,N/A,No retained event detector,Explicitly not applicable.
+G10,Decision,Every feature has a final scientific role,PASS,5 decisions,Retain roles are explicit.
+G10,Scope,No family scalar or standalone gate is authorized,PASS,false / false,No unjustified operationalization.
+G10,Freeze,Finalization preserves numerical equality to cohort candidate,READY,Finalization patch required,Must pass before atomic freeze.
+G10,Freeze,"Executed notebook, tests, workbook, figures, and hashes are sealed",READY,Freeze scripts required,Final immutable package pending local execution.

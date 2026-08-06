@@ -1,0 +1,19 @@
+{
+  "measurement_version": "qadd-v4.2.0-candidate",
+  "candidate_only": true,
+  "preflight_blocking_checks_pass": true,
+  "cohort_extraction_completed": false,
+  "publish_and_freeze": false,
+  "scientific_review_decision": "PENDING",
+  "analysis_features": [
+    "qadd_pause_ac_level_dbfs_median",
+    "qadd_pause_level_iqr_db",
+    "qadd_speech_pause_level_contrast_db",
+    "qadd_pause_spectral_flatness",
+    "qadd_mains_hum_comb_score_db"
+  ],
+  "strict_speech_contract": "canonical strict_speech; no second guard",
+  "strict_pause_contract": "canonical strict_internal_nonspeech; already 200-ms guarded",
+  "family_scalar_constructed": false,
+  "standalone_gate_allowed": false
+}

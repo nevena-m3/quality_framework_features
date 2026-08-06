@@ -1,0 +1,26 @@
+figure_id,panel,validation_purpose,title,scientific_content,legacy_evidence,action
+A1,A,Construct response,Pause-noise dose recovery,Injected pause RMS dBFS versus measured pause level and contrast; show identity/expected trend.,Current noise-dose table,REBUILD_STANDARD
+A2,A,Construct response,Nonstationarity dose,Matched-RMS stationary-to-intermittent/AM dose versus pause-level IQR.,Current AM single contrast,EXPAND
+A3,A,Construct response,Spectral-type response,"White, pink, brown, tonal, and hum controls versus flatness.",Current descriptor table,EXPAND
+A4,A,Construct response,Hum amplitude/frequency dose,"Injected 50/60-Hz comb amplitude and drift versus raw score, null P95, and excess.",Current single-dose controls,NEW
+B1,B,Discriminant specificity,Speech gain x pause-noise factorial,Show contrast changes with both vocal level and pause noise; demonstrate non-identifiability.,Missing,NEW_BLOCKING
+B2,B,Discriminant specificity,Hum confound suite,"Voiced leakage, low-F0 periodic speech, single tones/music, fan-like near-grid combs, white/pink/AM noise.",Partial colored-noise/53-Hz controls,NEW_BLOCKING
+B3,B,Discriminant specificity,Flatness channel controls,Low-pass/high-pass/shelf and codec controls with band sensitivity.,Partial codec controls,NEW
+C1,C,Transformation contract,Uniform gain/DC/polarity/time shift,Expected equivariance/invariance shown as error relative to tolerance.,Partial gain figure,EXPAND
+C2,C,Transformation contract,Resampling and codec round trip,44.1/48-kHz resampling plus PCM/MP3/Opus/AAC sensitivity.,Partial codec table,EXPAND
+D1,D,Support/availability,Feature availability and status,"Available, minimum/moderate/high, insufficient support, floor censored for five features.",Current distribution/status panel,REBUILD_STANDARD
+D2,D,Support/availability,Pause support topology,"Pause duration, independent pause count, frame/window count, floor fraction.",Tables exist,NEW
+D3,D,Support/availability,Support precision calibration,Whole-pause bootstrap/support truncation error versus duration/count.,Missing,NEW_BLOCKING
+E1,E,Sensitivity,Guard grid,100/150/200/250/300-ms guard sensitivity and availability transitions.,Current 200 vs 300 only,EXPAND
+E2,E,Sensitivity,Delete-one-pause sensitivity,Recording-level feature changes after deleting one whole pause.,Current figure/table,REBUILD_STANDARD
+E3,E,Sensitivity,Frame/window/band parameters,20/30/40-ms level frames; flatness/hum window and band perturbations.,Missing,NEW
+F1,F,Empirical distribution,Five-feature cohort distributions,Distribution plus availability/support; nonordinal labels for flatness and IQR.,Current composite histogram,REBUILD_STANDARD
+F2,F,Empirical distribution,Hum evidence decomposition,"Raw score, null P95, excess, winning frequency, and joint-evidence prevalence.",Missing,NEW
+G1,G,Signal-linked examples,Representative pause-level cases,"Waveform, canonical intervals, frame-level dBFS, and pause support.",Legacy galleries,REBUILD_VECTOR
+G2,G,Signal-linked examples,Spectral examples,Pause PSD with flatness band and 50/60 harmonic/sideband markers.,Missing,NEW
+G3,G,Signal-linked examples,Unavailable/floor-censored cases,Show why values are missing rather than zero.,Partial gallery,NEW
+H1,H,Reliability/redundancy,Repeated-recording persistence,"First-second scatter, balanced ICC, within-participant absolute differences.",Missing,NEW_BLOCKING
+H2,H,Reliability/redundancy,Within-family correlation,Spearman matrix and near-transform audit.,Current table,REBUILD_STANDARD
+H3,H,Reliability/redundancy,Participant weighting,Recording-weighted versus participant-balanced estimates.,Missing,NEW
+I,I,Event verification,Not applicable,No retained event detector.,N/A,N/A
+J1,J,ML handoff,Model-interface completeness,Feature value plus availability/status/support/floor/version; no thresholds.,Missing standardized interface,NEW

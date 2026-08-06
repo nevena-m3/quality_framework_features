@@ -1,0 +1,11 @@
+domain_number,domain,status,scientific_conclusion
+1,Construct validity,PASS,QCHAN measures cohort-relative spectral deviation and one-sided attenuation manifestations without identifying a physical device or channel source.
+2,Estimator validity,PASS,All four estimators reconstruct from saved target spectra and frozen LOSO references; signed precursors are retained before one-sided truncation.
+3,Implementation validity,PASS,"Canonical 16-kHz DC-removed analysis audio, guarded strict-speech frames, native-rate metadata, subject exclusion, and reference hashes are verified."
+4,Transformation behavior,PASS,"Uniform gain, polarity, DC, and common time shift are invariant; resampling and codecs are characterized rather than assumed invariant."
+5,Dose response,PASS,"Controlled low-pass restriction yields ordered LTAS, rolloff, and high-band responses; shelves and notches establish nonordinal coloration behavior."
+6,Discriminant validity,CONDITIONAL,"Noise, speech content, anatomy, dysarthria, and platform effects remain non-identifiable from single-channel no-reference speech."
+7,Support and uncertainty,PASS_WITH_QUALIFICATION,"All cohort recordings have strong target and reference support; source rate, reference membership, one-sided zero mass, and reference vintage remain mandatory context."
+8,Reliability and robustness,PASS_WITH_QUALIFICATION,Repeated-recording persistence and reference stability are strong overall; high-band repeatability is lower and tilt/rolloff depend on their pinned definitions.
+9,Interpretability,PASS,"Physical units, signed precursors, zero semantics, nonordinal direction, reference dependence, and confounders are explicit."
+10,Scientific scope,PASS,"No scalar, standalone rejection threshold, device identity, codec label, or pure transfer-function claim is authorized."

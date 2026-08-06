@@ -1,0 +1,30 @@
+{
+  "release": "qtemp-v0.3.1-finalization-r2",
+  "core_implementation": "qtemp-v0.3.0-measurement-development",
+  "tests_passed": 45,
+  "test_command": "pytest tests/test_qtemp_v03.py tests/test_qtemp_notebook_v031.py -q",
+  "code_cell_compile_errors": [],
+  "data_disabled_sequential_smoke": "PASS",
+  "source_notebook_clean": true,
+  "generator_parity": "PASS",
+  "programmatic_gate_target": "G1-G8 PASS",
+  "manual_gate_remaining": "G9 blinded adjudication",
+  "retained_features": [
+    "qtemp_dropout_duration_fraction",
+    "qtemp_dropout_event_rate_per_min",
+    "qtemp_frozen_audio_duration_fraction",
+    "qtemp_frozen_audio_event_rate_per_min"
+  ],
+  "dropped_features": [
+    "qtemp_splice_discontinuity_rate_per_min"
+  ],
+  "corrections": [
+    "same-ledger registry contract fixed",
+    "QDIST dependency resolved for dropped splice",
+    "splice validation failure represented as explicit drop decision",
+    "subject identity index-alignment warning removed",
+    "real-speech regex warning removed",
+    "gallery spectrogram numerical warning removed",
+    "G1 failure evidence made explicit"
+  ]
+}

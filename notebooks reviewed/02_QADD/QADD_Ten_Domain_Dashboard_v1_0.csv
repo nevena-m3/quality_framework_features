@@ -1,0 +1,11 @@
+domain_number,domain,status,scientific_conclusion
+1,Construct validity,PASS,The observables match additive-energy manifestations when claims are limited to recorded pause energy and spectral structure.
+2,Estimator validity,PASS,"Median AC-RMS dBFS, IQR, level contrast, spectral flatness, and harmonic-comb prominence measure their stated observables."
+3,Implementation validity,PASS,"Canonical intervals, no duplicate speech erosion, winner-consistent hum support, media hashes, and ledger reconstruction pass."
+4,Transformation behavior,PASS,"Gain equivariance/invariance, polarity, DC, time shift, resampling, and codec behavior match the contracts."
+5,Dose response,PASS,"Noise, speech/pause factorial, amplitude modulation, spectral type, and hum-comb doses produce the expected responses."
+6,Discriminant validity,CONDITIONAL,Competing-speech identity is unresolved and exact low-F0 periodic sources can mimic 50/60-Hz comb structure.
+7,Support and uncertainty,PASS,"Availability, floor censoring, window counts, support tiers, count-matched hum calibration, and missingness are explicit."
+8,Reliability and robustness,CONDITIONAL,"Most features are stable when supported; pause IQR and hum are more support-sensitive, and hum can be intermittent."
+9,Interpretability,PASS,"Units, orientation, nonordinal features, quality-direction limits, and failure modes are explicitly documented."
+10,Scientific scope,PASS,Each feature is labeled as established primitive plus study-specific aggregation or targeted proxy; no scalar or gate is authorized.

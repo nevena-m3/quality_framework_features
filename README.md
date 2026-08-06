@@ -1,160 +1,99 @@
-# Paper 1: quality control for remote speech biomarkers
+# Paper 1 Remote Speech Quality-Control Pipeline
 
-This is a clean rebuild of the original Paper 1 pipeline. It keeps the familiar notebook sequence while moving every reusable algorithm into a tested Python package. The pipeline is a **measurement and validation study**, not an ALS diagnostic model.
+This repository contains the auditable measurement and validation pipeline used for Paper 1. It evaluates acquisition-related variation in remote speech recordings and maintains frozen, traceable feature-family outputs.
 
-The principal design decisions are:
+The repository has two intentional code layers:
 
-- audit every workbook and media stream before cohort selection;
-- keep native audio for clipping, dropout, codec, bandwidth, and channel evidence;
-- create a separate 16-kHz mono view only for VAD and comparable frame analyses;
-- treat each Q metric as an observed proxy with its own support/status, not as a reflective latent scale;
-- never average heterogeneous metrics into an overall Q score without separate construct-validation evidence;
-- retain one logical recording when WAV/WEBM rows describe the same recording and
-  select a uniquely decodable WAV in preference to WEBM;
-- require an immutable, versioned data freeze before segmentation or feature extraction;
-- preserve one Silero diagnostic figure per recording; require explicit review of every
-  automatically flagged/excluded recording and accepted segmentation-only outlier; and
-  freeze recording eligibility and final primary boundaries before feature extraction;
-- automatically exclude frozen Bamboo rows with
-  `Task Completed as Instructed = NO`, while retaining the source value and exclusion
-  reason in the decision ledger;
-- cluster inference by participant and prevent repeated recordings from becoming pseudoreplicates;
-- estimate main perceptual alignment within RA and quantify four-RA agreement only in
-  the crossed reliability subset before forming consensus;
-- use no SMOTE, synthetic minority examples, or record-level train/test splitting.
+- `src/paper1_qc/` is the shared core and the last frozen implementations.
+- `src reviewed/paper1_qc_reviewed/` contains the newer reviewed feature-family implementations and imports shared utilities from the core layer.
 
-## What is currently verifiable
+Do not remove the core layer merely because a reviewed implementation exists. Reviewed notebooks rely on both source roots.
 
-The uploaded metadata workbooks were audited and the results are summarized in
-`reports/reference_audit/REFERENCE_METADATA_AUDIT.md`. The repository includes synthetic
-checks for segmentation guards, sentinel handling, additive-noise behavior, hard
-clipping, dropouts, reverberation tails, and rater consensus. Notebook 02a additionally
-runs and saves deterministic additive-interference dose-response, transient-separation,
-noise-type, and global-gain controls with explicit pass/fail criteria.
+## Current feature-family implementations
 
-The full empirical run remains intentionally unavailable in this environment because the
-audio directories and complete annotations are local to the study computer. The code is
-configured for the stated Windows root and can be run locally now. It recognizes rater
-identity from the four declared RA folders, excludes `Reliability` from the distributed
-main import, and separately validates the crossed 70-file reliability set.
+| Family | Core/frozen line | Latest reviewed line |
+| --- | --- | --- |
+| Gain dynamics | `qgain.py` (v3.1) | `qgain_v410.py` |
+| Additive interference | `qadd.py` (v4.1) | `qadd_v420*.py` |
+| Reverberation | `qrev.py` (v3.1.1) | `qrev_v400*.py` |
+| Channel/device | `qchan.py` (v3.0.1) | `qchan_v400*.py` |
+| Nonlinear distortion | `qdist.py` (v3.1.1) | `qdist_v410*.py` |
+| Temporal discontinuity | `qtemp.py` (v0.3.1) | `qtemp_v100_candidate.py` plus the final analytical-disposition notebook |
 
-A **logical recording** is one recording event identified by the filename stem after the
-extension is removed. For example, matching `.wav` and `.webm` files are two encodings of
-one logical recording—not two observations. If both uniquely decode, `.wav` is selected
-for the primary frozen dataset and the pair remains available for encoding sensitivity.
+Version suffixes in this table are part of the scientific provenance. They are not interchangeable APIs.
 
-## Windows setup
+## Repository map
 
-Use Python 3.11 and install FFmpeg/FFprobe on `PATH`.
+```text
+config/                 Local configuration templates and adjudication inputs
+docs/                   Core protocols, specifications, release notes, and run guides
+docs reviewed/          Reviewed-family scientific decisions and validation records
+notebooks/              Core pipeline, frozen feature notebooks, assembly, and analyses
+notebooks reviewed/     Latest reviewed source/finalization notebooks by feature family
+scripts/                Core notebook generators and command-line helpers
+scripts reviewed/       Reviewed-family verification and orchestration helpers
+src/paper1_qc/          Installable core Python package
+src reviewed/           Reviewed Python package used by reviewed notebooks
+tests/                  Core and frozen-line tests
+tests reviewed/         Reviewed-family tests
+visualization/          Result-audit and manuscript visualization notebooks
+outputs*/               Generated local work products (not committed)
+MAIN outputs*/          Immutable/local freeze products (not committed, except README)
+```
+
+See `docs/REPOSITORY_MAINTENANCE.md` for the retention policy and cleanup record.
+
+## Setup
+
+Python 3.11 is the supported baseline.
 
 ```powershell
-cd "C:\Users\musikicn\Desktop\Nevena_project\paper_1"
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install -e ".[dev,reverb]"
-Copy-Item config\project.example.yaml config\project.yaml
-Copy-Item config\human_qc_schema.example.yaml config\human_qc_schema.yaml
-ffmpeg -version
-ffprobe -version
 ```
 
-Review `config/project.yaml`. The example already points to:
+Copy the example configuration files before running cohort work. Local configuration and participant-derived data are intentionally ignored by Git.
 
-```text
-C:\Users\musikicn\Desktop\Nevena_project\Data_13072026
-```
+## Run and test
 
-Do not change thresholds after inspecting associations with clinical outcomes or human labels. Any threshold change becomes a new analysis version and must be recorded.
-
-## Execution order
+Run the core suite:
 
 ```powershell
-paper1-qc --config config/project.yaml audit
-paper1-qc --config config/project.yaml inventory
-paper1-qc --config config/project.yaml freeze-template
-# Fill config/metadata_adjudication.csv; every row needs ALS, CONTROLS, or EXCLUDE.
-paper1-qc --config config/project.yaml freeze
-paper1-qc --config config/project.yaml segment
-# Inspect outputs/01_segmentation/figures/segmentation/silero/
-# and outputs/01_segmentation/segmentation/silero/.
-paper1-qc --config config/project.yaml segment-template
-# Use the segmentation notebook to listen/review and choose:
-# one-click KEEP+AUTO, optional KEEP+MANUAL, or EXCLUDE+NONE.
-paper1-qc --config config/project.yaml segment-adjudicate
-# This creates outputs/01_segmentation_after_review. Accepted and flagged
-# recordings proceed; excluded recordings do not.
-paper1-qc --config config/project.yaml extract --profile primary
-paper1-qc --config config/project.yaml assemble
-paper1-qc --config config/project.yaml describe
+python -m pytest tests
 ```
 
-After checking the four RA folder names, the nested `Reliability` layout, and the broad
-label direction:
+Run reviewed-family tests with both source roots available:
 
 ```powershell
-paper1-qc --config config/project.yaml human-qc --schema config/human_qc_schema.yaml
+$env:PYTHONPATH = "$PWD\src;$PWD\src reviewed"
+python -m pytest "tests reviewed"
 ```
 
-Sensitivity run:
+For notebook execution, begin with the relevant `*_SOURCE.ipynb` or `*_FINALIZATION_SOURCE.ipynb`. Files labeled `LOCAL`, `EXECUTED`, or `REFERENCE` are evidence/results, not the canonical editable source.
+
+QTEMP has a Windows runner at `RUN_QTEMP_FINALIZE.cmd`. Read `QTEMP_v100_FINAL_READ_ME.md` before using it.
+
+## Scientific status
+
+The reviewed layer is not uniformly publication-frozen. Each feature family records its own validation gates and disposition. In particular, QTEMP v1.0.0 concludes with no retained primary features; its dropout measures are exploratory and frozen-audio measures are monitoring-only. Consult the corresponding decision and finalization documents before downstream use.
+
+## Verification baseline
+
+The reviewed suite currently passes completely. The core suite has four known notebook-governance failures involving committed execution metadata/source-generator parity; all remaining tests pass. See `docs/TEST_STATUS.md` for exact results. Do not “fix” those failures by clearing or regenerating scientific evidence without first confirming the intended canonical notebook.
+
+## Data and Git policy
+
+Never commit participant media, local configuration, generated outputs, virtual environments, notebook checkpoints, or recovery archives. The `.gitignore` encodes these rules. Large local outputs remain in their established paths because notebooks and manifests use those paths.
+
+Before committing:
 
 ```powershell
-paper1-qc --config config/project.yaml extract --profile conservative
-paper1-qc --config config/project.yaml extract --profile permissive
-paper1-qc --config config/project.yaml sensitivity
-paper1-qc --config config/project.yaml rest-reference
-paper1-qc --config config/project.yaml encoding-sensitivity
+git status --short
+python -m pytest tests
+$env:PYTHONPATH = "$PWD\src;$PWD\src reviewed"
+python -m pytest "tests reviewed"
 ```
 
-`Rest` is not pooled into the primary Bamboo cohort. The pipeline audits `Rest.xlsx` and
-the Rest media inventory, then uses only exact participant/date/protocol/iteration
-Bamboo–Rest pairs as a contextual acquisition sensitivity. Rest is summarized as a
-whole-recording reference without speech VAD; unmatched or nearest-date Rest recordings
-are excluded from this comparison.
-
-The notebooks under `notebooks/` mirror the computational order. Reusable algorithms
-remain in the package, registry, and tests, while each feature-family notebook contains
-long-form visible audit code, definitions, checks, tables, figures, and a decision gate.
-The separate `visualization/` folder contains study-level audit code, intermediate
-figures, denominator tables, and paper-figure candidates for segmentation plus four
-study goals. Change reusable algorithms in the package, registry, and tests together;
-use both notebook layers to audit and present the saved results.
-
-See `docs/GIT_AND_WINDOWS_RUN_GUIDE.md` for exact PowerShell, Git, and notebook instructions.
-
-## Output contracts
-
-| Stage | Required output | Gate before continuing |
-|---|---|---|
-| `00_audit` | audited rows, canonical recordings, issue ledgers, column profiles, media hashes/probes | complete the adjudication template |
-| `MAIN outputs/00_DATA_FREEZE/<version>` | immutable included tables, complete ledger, issue dispositions, diagnosis provenance, hashes | no pending diagnosis; every included file resolves once and decodes |
-| `01_segmentation` | `figures/` plus `segmentation/` with one original-style plot/frame/segment artifact and one exact-edge boundary audit per recording | review all automatic failures, flags, and boundary outliers |
-| `01_segmentation_after_review` | post-review per-recording figures, frames, segments, boundary audits, and status tables split into accepted/flagged/excluded | accepted and flagged are eligible; excluded are audit-only |
-| `MAIN outputs/01_SEGMENTATION_FREEZE/<version>` | immutable decisions, final interval table, manual-override ledger, decision summary, manifest | review all mandatory rows and freeze eligibility plus final primary boundaries |
-| `02_features` | one metric row per logical Bamboo recording; metric-specific and family statuses; formula/unit/direction/support registry; deterministic control tables; separate family figures/tables | exact frozen-recording contract; no status/value mismatch, impossible range, under-supported primary metric, extraction error, or failed deterministic control |
-| `03_dataset_assembly` | validated one-to-one merge; explicit eligibility columns | reproduce the participant/recording flow diagram from saved counts |
-| `04_analysis` | clustered descriptive estimates, structure, persistence, rater-stratified main alignment, crossed-set four-RA agreement/consensus, paired detailed/2RA comparisons, sensitivity | verify denominators, confidence intervals, class support, direction/scale mapping, and blocked analyses |
-
-Every notebook stage creates separate `figures/` and `tables/` directories and ends with
-a visible PASS/BLOCKED decision gate. Commands save CSV (and Parquet when available), an
-error ledger where relevant, and a run manifest containing configuration/input hashes
-and package versions.
-
-## Hard stops
-
-Stop rather than improvise if any of the following occurs:
-
-- a logical recording has no uniquely decodable encoding (WAV is preferred when both
-  WAV and WEBM are valid);
-- filename subject/date/task disagrees with metadata;
-- diagnosis is inferred from an ID but has not been reviewed;
-- a clinical sentinel or impossible score/date remains in an analysis field;
-- independent rater identity is absent, the folder design is inconsistent, or crossed
-  reliability exports appear adjudicated rather than independent;
-- the class/category count is too small for the pre-specified estimand;
-- VAD or feature extraction fails without a saved error row, a mandatory segmentation
-  review is incomplete, or feature extraction would use anything other than
-  `frozen_segmentation_intervals`;
-- a result requires treating WAV and WEBM copies or repeated visits as independent observations.
-
-See `docs/SCIENTIFIC_MEASUREMENT_PROTOCOL.md`, `docs/STATISTICAL_ANALYSIS_PLAN.md`, and `docs/ORIGINAL_PIPELINE_AUDIT_AND_CHANGES.md` before modifying the analysis.
+A dated recovery folder may exist beside this checkout. It is deliberately outside Git and contains superseded snapshots and backups retained during repository cleanup.

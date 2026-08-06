@@ -1,0 +1,54 @@
+{
+  "release": "QDIST v4.0.0 reviewed preflight API compatibility hotfix R1",
+  "measurement_candidate": "qdist-v4.0.0-candidate",
+  "frozen_numerical_baseline": "qdist-v3.1.1",
+  "hotfix_revision": "legacy-api-compat-r1",
+  "reviewed_orchestration_version": "qdist-v4.0.0-preflight-orchestration-v2",
+  "scientific_change": false,
+  "production_detector_modified": false,
+  "cohort_extraction_allowed": false,
+  "freeze_allowed": false,
+  "independent_validation": {
+    "focused_tests": "28 passed against the exact qdist-v3.1.1 source from pipeline_files.zip",
+    "analytical_preflight": "18/18 checks passed",
+    "figure_bundles": "Panels A-C generated with six artifacts each"
+  },
+  "file_count": 7,
+  "files": [
+    {
+      "relative_path": "README_QDIST_V400_PREFLIGHT_API_COMPAT_R1.md",
+      "bytes": 218,
+      "sha256": "5e96fb79c47187c1fd6294631a797fa4f089145bbfeed0f5e98613b3232ddb4c"
+    },
+    {
+      "relative_path": "docs reviewed/QDIST_V400_PREFLIGHT_API_COMPAT_R1_REPORT.md",
+      "bytes": 1798,
+      "sha256": "c74b1f6176d6cbc3059f4093deba1aa6e23e949ce4356901d1711ea842d19b03"
+    },
+    {
+      "relative_path": "notebooks reviewed/05_QDIST/05_nonlinear_distortion_QDIST_v4_0_0_REVIEWED_PREFLIGHT_SOURCE.ipynb",
+      "bytes": 6714,
+      "sha256": "a0d1b210c8df91eac0ab6a753251dcbe863cb9a6392d7520191cfa8b9258ece2"
+    },
+    {
+      "relative_path": "src reviewed/paper1_qc_reviewed/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "relative_path": "src reviewed/paper1_qc_reviewed/qdist_v400.py",
+      "bytes": 36587,
+      "sha256": "e6fedbf4841bb9d3793e95325b6fdda69b6dcbe255981ae820f13c451822b281"
+    },
+    {
+      "relative_path": "tests reviewed/test_qdist_v400.py",
+      "bytes": 4623,
+      "sha256": "4f6686c1020247e284e33c208eb8b6ff5970b56c9d914d4c9df867dc29fcd313"
+    },
+    {
+      "relative_path": "tests reviewed/test_qdist_v400_notebook.py",
+      "bytes": 1937,
+      "sha256": "65317527ecc17af353634d084d6804d5806c2b754aa9d7b09928826430ec22e2"
+    }
+  ]
+}

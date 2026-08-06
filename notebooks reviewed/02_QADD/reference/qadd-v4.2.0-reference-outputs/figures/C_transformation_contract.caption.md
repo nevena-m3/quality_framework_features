@@ -1,0 +1,1 @@
+QADD transformation behavior. Pause level is gain-equivariant while relative/shape features are gain-invariant. Resampling and codec round trips are characterized separately using feature-specific units and prespecified codec tolerances.

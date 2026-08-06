@@ -1,15 +1,26 @@
 # Local environment and secrets/configuration
 .venv/
+.venv_*/
 venv/
 config/project.yaml
 config/human_qc_schema.yaml
 config/human_qc_manifest.csv
+config/metadata_adjudication.csv
+config/segmentation_adjudication*.csv
+config/manual_segmentation_overrides*.csv
 .env
 
 # Participant data and generated analyses must never be committed
 Data_13072026/
 data/
 outputs/
+outputs reviewed/
+MAIN outputs/*
+!MAIN outputs/README.md
+MAIN outputs reviewed/
+QTEMP_FREEZE_EVIDENCE_FOR_REVIEW/
+QTEMP_v100_LOCAL_RUN_FOR_REVIEW/
+reference evidence/
 *.wav
 *.webm
 *.mp3
@@ -25,9 +36,20 @@ outputs/
 # Python/Jupyter
 __pycache__/
 *.py[cod]
+*.egg-info/
 .pytest_cache/
 .ruff_cache/
 .ipynb_checkpoints/
+
+# Local recovery copies and packaged snapshots
+backups/
+*_backups/
+*_backup*/
+*.bak
+*.zip
+*.7z
+*.tar
+*.tar.gz
 
 # OS/editor
 .DS_Store

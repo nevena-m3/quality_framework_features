@@ -1,0 +1,5 @@
+check,passed,observed,required
+sine AC-RMS,True,0.07071067811865474,0.07071067811865475
+sine dBFS,True,-23.010299956639813,-23.010299956639813
+all raw estimands reconstruct,True,11/11,11/11
+canonical strict speech receives no second guard,True,direct=1340; double=1290,direct > double and applied guard=0

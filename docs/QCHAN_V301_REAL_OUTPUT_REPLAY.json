@@ -1,0 +1,54 @@
+{
+  "measurement_version": "qchan-v3.0.1",
+  "replayed_recordings": 519,
+  "replayed_subjects": 224,
+  "measured_references": 519,
+  "reference_subject_count_min": 223,
+  "reference_subject_count_max": 223,
+  "empirical_floor_summary": [
+    {
+      "feature": "qchan_ltas_distance_db",
+      "minimum_pairwise_spearman": 0.9999947638675962,
+      "median_within_recording_range": 0.0,
+      "q95_within_recording_range": 0.0,
+      "maximum_within_recording_range": 1.2005217170867528
+    },
+    {
+      "feature": "qchan_rolloff95_deficit_hz",
+      "minimum_pairwise_spearman": 1.0,
+      "median_within_recording_range": 0.0,
+      "q95_within_recording_range": 0.0,
+      "maximum_within_recording_range": 0.0
+    },
+    {
+      "feature": "qchan_highband_ratio_deficit",
+      "minimum_pairwise_spearman": 1.0,
+      "median_within_recording_range": 0.0,
+      "q95_within_recording_range": 0.0,
+      "maximum_within_recording_range": 0.0
+    },
+    {
+      "feature": "qchan_tilt_steepening_db_per_oct",
+      "minimum_pairwise_spearman": 1.0,
+      "median_within_recording_range": 0.0,
+      "q95_within_recording_range": 0.0,
+      "maximum_within_recording_range": 0.0
+    }
+  ],
+  "gallery_unique_recordings": 13,
+  "gallery_selection_reasons": [
+    "qchan_ltas_distance_db_q05",
+    "qchan_ltas_distance_db_q50",
+    "qchan_ltas_distance_db_q95",
+    "qchan_rolloff95_deficit_hz_zero;qchan_highband_ratio_deficit_zero;qchan_tilt_steepening_db_per_oct_zero",
+    "qchan_rolloff95_deficit_hz_positive_q10",
+    "qchan_rolloff95_deficit_hz_positive_q50",
+    "qchan_rolloff95_deficit_hz_positive_q90",
+    "qchan_highband_ratio_deficit_positive_q10",
+    "qchan_highband_ratio_deficit_positive_q50",
+    "qchan_highband_ratio_deficit_positive_q90",
+    "qchan_tilt_steepening_db_per_oct_positive_q10",
+    "qchan_tilt_steepening_db_per_oct_positive_q50",
+    "qchan_tilt_steepening_db_per_oct_positive_q90"
+  ]
+}

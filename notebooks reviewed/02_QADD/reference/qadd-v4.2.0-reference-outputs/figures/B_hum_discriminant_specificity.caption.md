@@ -1,0 +1,1 @@
+Hum-comb specificity controls. Asterisks indicate score above the count-matched null with at least three supported harmonics. Low-F0 voiced-like and periodic machinery controls are reported as causal confounds rather than hidden.

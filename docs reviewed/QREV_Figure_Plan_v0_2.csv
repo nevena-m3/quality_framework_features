@@ -1,0 +1,11 @@
+panel,title,stage,required,content,status
+A,Controlled construct response,PREFLIGHT,True,RIR dose for tail excess/persistence/SRMR; known exponential slope recovery; censoring/saturation annotated,PENDING_LOCAL_PREFLIGHT
+B,Discriminant specificity,PREFLIGHT,True,"RIR target versus stationary noise, changing floor, breath, rising/nondecay, delayed echo, SRMR noise",PENDING_LOCAL_PREFLIGHT
+C,Transformation contract,PREFLIGHT,True,"Gain/polarity/DC/common shift, source-rate resampling, FLAC/Opus/AAC, SRMR duration behavior",PENDING_LOCAL_PREFLIGHT
+D,"Support, availability, and censoring",COHORT,True,Availability/error versus valid boundaries and pause support; SRMR speech duration; censored fraction,PENDING_COHORT
+E,"Boundary, horizon, and floor sensitivity",COHORT,True,"Boundary shifts, support thresholds, persistence horizon/threshold, frame/window, floor-window variants",PENDING_COHORT
+F,Empirical distributions,COHORT,True,Conditional tail features and broadly available SRMR separately; missingness/support/outliers/censoring,PENDING_COHORT
+G,Signal-linked examples,COHORT,True,"Waveform/envelope/spectrogram at typical, high, censored, breath/noise, delayed echo, and failure cases",PENDING_COHORT
+H,Reliability and redundancy,COHORT,True,"Participant-aware persistence, subject balancing, same-family correlations and pairwise support",PENDING_COHORT
+I,Event verification,N/A,False,No retained discrete echo/event detector,N/A
+J,Quality-aware ML handoff,COHORT,True,"Availability, censoring, support, precision and status completeness; no generic threshold",PENDING_COHORT

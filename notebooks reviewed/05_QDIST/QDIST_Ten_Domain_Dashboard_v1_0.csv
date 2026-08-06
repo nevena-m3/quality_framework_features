@@ -1,0 +1,11 @@
+domain,final_status,scientific_basis
+Construct validity,PASS_WITH_SCOPE_LIMIT,Measures native-waveform plateau morphology compatible with hard clipping or saturation; not the full nonlinear-distortion construct.
+Estimator validity,PASS,All three outputs reconstruct from accepted-plateau and merged-episode ledgers for 519 recordings.
+Implementation validity,PASS,"Native-rate PCM, native channels, task span, complete frames, hashes, and immutable v3.1.1 baseline are verified."
+Transformation behavior,PASS_WITH_QUALIFICATION,"Polarity, aligned translation, attenuation after clipping, and lossless PCM behave as specified; resampling/lossy coding can erase plateaus."
+Dose response,PASS_WITH_QUALIFICATION,Controlled hard-clipping burden yields ordered frame/sample response and perfect precision; recall is conservative at smallest doses.
+Discriminant validity,PASS_WITH_SCOPE_LIMIT,"Clean speech, natural extrema, quantization, impulses/noise and moderate smooth saturation are not promoted; causal clipping stage is not identifiable."
+Support and uncertainty,PASS_WITH_QUALIFICATION,"All 519 are available; Poisson intervals, merge-gap sensitivity, threshold margins and delete-one influence are retained because only 15 episodes occur."
+Reliability and robustness,PASS_WITH_MAJOR_QUALIFICATION,"Negative agreement is high, positive agreement is 0.40, and positive-part magnitude reliability is not estimable."
+Event verification,PASS_WITH_QUALIFICATION,"All accepted, rejected and valid-zero items were reviewed label-blind; adjudication is AI-assisted and 13 rejected items remain ambiguous."
+Scientific scope and handoff,PASS,"No scalar, standalone gate, imputation, complete-distortion claim or independent-view claim is authorized."
