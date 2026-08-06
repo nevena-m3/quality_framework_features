@@ -54,3 +54,12 @@ def test_discover_project_root(tmp_path: Path):
     (root / "src").mkdir()
     (root / "pyproject.toml").write_text("[project]\nname='x'\n", encoding="utf-8")
     assert discover_project_root(nested) == root.resolve()
+
+
+def test_empty_external_error_csv_is_readable(tmp_path: Path):
+    path = tmp_path / "external_errors.csv"
+    columns = ["logical_recording_id", "tool", "error_type", "message"]
+    pd.DataFrame([], columns=columns).to_csv(path, index=False)
+    loaded = pd.read_csv(path)
+    assert list(loaded.columns) == columns
+    assert loaded.empty

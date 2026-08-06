@@ -750,7 +750,15 @@ def run_external_comparators(
         )
 
     measurements.to_csv(destination / "external_measurements.csv", index=False)
-    pd.DataFrame(errors).to_csv(destination / "external_errors.csv", index=False)
+    error_columns = [
+        "logical_recording_id",
+        "tool",
+        "error_type",
+        "message",
+    ]
+    pd.DataFrame(errors, columns=error_columns).to_csv(
+        destination / "external_errors.csv", index=False
+    )
     manifest.to_csv(destination / "resolved_audio_manifest.csv", index=False)
     return {
         "measurements": destination / "external_measurements.csv",
